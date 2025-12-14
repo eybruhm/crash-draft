@@ -1,0 +1,39 @@
+
+So what we are doing is youre helping and guiding me to achieve my two goals: to integrate my backend to frontend and to deploy online my project. 
+
+We created a general workflow with 10 steps. The Step 4: Port Frontend Components to Vite took us a lot of time and chats (to the point that u forgot what we are doing) that’s why it has its own roadmap. 
+
+As you observe in our roadmap for Step 4, it has a specific format. In creating roadmap, it should have
+- Day with indicated goal and description
+- Each day have steps
+- Each steps have sub-steps and description so I know what we are doing
+It doesn’t need to be very very detailed---like writing codes for whole class/file. Just the general detail enough for a beginner to follow. Because what I will do after we created the roadmap, I will send to you the Day and you will recall the goal, steps, and sub-steps and you will do it. Every day we finished have documentation:
+*Day - Title
+*What was Done (each step and sub-step)
+*Files created and modified (this just my addition)
+*How to test (to find bugs and we will solve it. we dont move to next day until we are clear)
+*Current state
+*Important Notes
+*Next Steps/Day Preview (connecting to what we did)
+*Summary
+*[Just send it in Chat Convo so even you can recall it!]
+
+So if u traverse our chat history (from other chat), u will observe it that way. For now, we are not doing any roadmap because I want you to remember (if u can from another chat) it, confirm our progress, and feed ur memory again our context. 
+
+Now your task for now is I want u to deeply review the context I listed:
+- /Word Files/Supabase Code
+- /Word Files/Sitemap Police & Admin
+- /Word Files/Flow Police & Admin
+- /Word Files/General Workflow
+- /Word Files/AI Suggestions
+- redo the Step 1. Deep understanding and collection of context. Read every folders, file, classes, and functions I have in frontend and backend. Even /docs.
+- Send me ur understanding and observation, so I can acknowledge you
+
+You will also notice that theres “Admin Web”. To give u another context, we are developing CRASH (Crime Response & Alert System Hub). It has three main users: Police (us), Admin (us later), and Users/Citizens. The Citizens is using a mobile app written in tsx-react-native with built in backend (not our backend nor Django), its developing currently with my friend. We are focusing now on the Police web written in reactjs-vite and Django. Later, we will also do the Admin Web-Django (same backend) integration but after we deploy the police. Its just that, I also have another friend who is currently developing the Admin web. And actually our users are: Police, Citizens, Admin1, and Admin2. Admin level 1 is like the junior IT, its the one that uses our admin web and manage the police accounts. Admin level 2 is the senior it who directly access the database and handles admin1 accounts. Admin2 will use the sql insertion in supabase to register, edit, delete, and manage the admin1 accounts. 
+
+Btw we are highschool ict students. We are beginner and never done this. I never code python before, I never did backend before, so Django is vibecoded. I never code before. I never use reactjs-vite (but that’s why im struggling with nextjs hence we did conversion and porting). That’s why im doing this because I need ur patience and guidance. Pls transfer ur knowledge and skills to me without overwhelms me. I still want to learn even this is vibecoded that’s why documentation in chat box is important. 
+
+but yea, I want you first to gain context and understanding. I always give signal before we move and decide. Just ask me, suggest, provide options to me so it also helps u gain more context and info!
+
+For now, we are not doing any roadmap because I want you to absorb it, confirm our progress, and feed ur memory our context. 
+

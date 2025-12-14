@@ -1,0 +1,131 @@
+
+💻 CRASH Police Web Dashboard (Sitemap)
+│
+├── 1. Login Page (Entry Point)
+│     ├── 1.1 Input: Email
+│     ├── 1.2 Input: Password
+│     └── 1.3 Button: Login
+│
+├── 2. Dashboard Page (Active Reports Overview)
+│     ├── 2.1 Data Display: List of Active Reports (Status != 'Resolved' or 'Canceled')
+│     ├── 2.2 Report List Columns:
+│     │     ├── Reporter Name
+│     │     ├── Reporter Contact
+│     │     ├── Category
+│     │     ├── Location (Text: City, Barangay)
+│     │     ├── Status
+│     │     ├── Time Submitted
+│     │     └── Actions
+│     ├── 2.3 Action: View (Popup/Sub-Page)
+│     │     ├── Reporter Full Details (including Emergency Contact Name/Number)
+│     │     ├── Description
+│     │     ├── Attached Media (Images/Videos)
+│     │     ├── Input: Update Status (Dropdown: Pending, Acknowledged, En Route, Resolved, Canceled)
+│     │     ├── Button: Send Message (Links to Chat)
+│     │     └── Display: ETA and Distance
+│     ├── 2.4 Action: Directions (Popup/Sub-Page)
+│     │     ├── Map Display: Route from Police Office to Incident Location
+│     │     ├── Display: ETA and Distance
+│     │     └── Display: QR Code (Scannable link to Google Maps Directions)
+│     └── 2.5 Action: Open Chat (Popup/Sub-Page)
+│         ├── Conversation Box: History of Police and Reporter messages
+│         ├── Input: Type Message
+│         └── Button: Send Message
+│
+├── 3. Live Map Page
+│     ├── 3.1 Map Display: Real-time visualization
+│     ├── 3.2 Map Toggles:
+│     │     ├── Toggle: Active Cases (Pins for Reports: Pending, Acknowledged, En Route)
+│     │     ├── Toggle: Police Offices/Stations (Pins for tbl_police_offices)
+│     │     └── Toggle: Police Checkpoints (Pins for tbl_checkpoints)
+│     ├── 3.3 Conditional: If Checkpoint Toggle is ON
+│     │     └── Dropdown/Filter: Active Checkpoints vs. Inactive Checkpoints (Based on schedule comparison)
+│     └── 3.4 Checkpoint Management Controls (Popup/Sub-Page via Map Interaction)
+│         ├── Button: Add Checkpoint
+│         ├── Button: Edit Checkpoint
+│         └── Button: Remove Checkpoint
+│
+├── 4. Analytics Page (Volume & Hotspot Analysis)
+│ 	├── 4.1 Universal Filter Controls (Applies to ALL sections 4.2-4.4 and Print):
+│ 	│     ├── Filter: Timeframe (Options: 7, 30, 90, 180, 365 Days)
+│ 	│     ├── Filter: Data Scope (Options: All Offices, Our Office)
+│ 	│     ├── Filter: City (Options: All Cities, Specific City)
+│ 	│     ├── Filter: Barangay (Options: All Barangays, Specific Barangay)
+│ 	│     │   └── Note: Barangay dropdown only appears AND loads options when a Specific City is selected.
+│ 	│     └── Filter: Crime Category (Options: All Categories, Specific Category)
+│ 	├── 4.2 Report Volume Overview (Summary Section - Always Visible)
+│ 	│     ├── Display: Total Reports Assigned (in filtered scope)
+│ 	│     └── Display: Average Resolution Time (Calculated field)
+│ 	├── 4.3 Location & Category Hotspots (Analysis Sections - Always Visible)
+│ 	│     ├── Display: Top 5 Locations Analysis
+│ 	│     │   └── Output: Dynamic Display based on Geographic Filters:
+│ 	│     │   	├── Case A (City = All, Barangay = All): Ranked list of **Top 5 City-Barangay** combinations by count (Top hotspots across all areas).
+│ 	│     │   	├── Case B (City = Specific, Barangay = All): Ranked list of **Top 5 Barangays** *within* the selected City (Focus on hotspots inside the city).
+│ 	│     │   	└── Case C (City = Specific, Barangay = Specific): single row displaying the Total Report Count for the **single selected Barangay**.
+│ 	│     └── Display: Category Concentration Analysis
+│ 	│         └── Output: Dynamic Display based on Crime Category Filter:
+│ 	│         	├── Case 1 (Filter = All Categories): Ranked list of Top 5 Categories (Count & Percentage).
+│ 	│         	└── Case 2 (Filter = Specific Category): a single row showing Count & Percentage for the single selected crime.
+│ 	└── 4.4 Action: Print/Export Full Analysis Button
+│      	└── Note: Sends request using all active 4.1 filters to generate PDF
+│
+└── 5. Resolved Cases Page (Audit Log)
+    ├── 5.1 Local Filter Controls (Specific to Resolved Cases):
+    │     ├── Filter: Timeframe (Days: 7, 30, 90, 180, 365)
+    │     └── Filter: Data Scope (Options: All Offices, Our Office)
+    ├── 5.2 Data Display: List of all Resolved Reports
+    └── 5.3 Action: View Details (Per Row)
+         └── Note: Shows full audit details including Resolution Summary (Remarks).
+         └── Note: Export Button to export the full report details. 
+
+
+
+
+
+
+
+
+
+
+💻 CRASH Admin Web Dashboard (Sitemap)
+│
+├── 1. Login Page (Entry Point)
+│     ├── 1.1 Input: Email / Username
+│     ├── 1.2 Input: Password
+│     └── 1.3 Button: Login
+│
+├── 2. Dashboard (Map & Overview)
+│     ├── 2.1 Map Display: Police Office Locations
+│     └── 2.2 Police Account Pins (Clickable):
+│         ├── Display: Police Office Name
+│         ├── Display: City, Barangay
+│         ├── Display: Head Officer
+│         └── Display: UUID
+│
+├── 3. Police Account Management (CRUD)
+│     ├── 3.1 Data Display: List of Police Accounts (Editable Grid/Table)
+│     ├── 3.2 Action: Add Police Account (Opens Popup/Form)
+│     │     └── Fields: Office Name, Email, Password, Location (Lat/Lng), Contact No., Head Officer, City, Barangay
+│     ├── 3.3 Action: Edit Police Account (Per Row) (Opens Popup/Form with save/cancel button)
+│     └── 3.4 Action: Delete Police Account (Per Row)
+│
+├── 4. Manual Report Insertion Page (External Data Entry)
+│     ├── 4.1 Section: Report Form (Primary Input)
+│     │     ├── Input Fields: All fields in tbl_reports (report_id, reporter_id, assigned_office_id, category, status: Pending or Resolved dropdown, lat/lng, city, baranggay, remarks, created_at, updated_at, etc.) *-timestamp: e.g. 2025-12-01 15:13:50.19793
+│     └── 4.2 Section: Data Search Tools (Helper Components)
+│         ├── 4.2.1 Tool: Search User
+│         │     ├── Input: Name or UUID
+│         │     └── Display: All tbl_users fields (excluding password_hash)
+│         └── 4.2.2 Tool: Search Police Office
+│             ├── Input: Office Name or UUID
+│             └── Display: All tbl_police_offices fields
+│     └── 4.3 Action: Submit Report (Inserts new report into tbl_reports)
+│
+└── 5. Profile Page (Admin Details)
+    ├── 5.1 Display Fields: Username, Email, Contact No., Created At
+    ├── 5.2 Action: Edit Details (Allows modification of username, email, contact)
+    ├── 5.3 Action: Change Password  (Opens Popup/Form)
+    └── 5.4 Button: Logout
+
+
+
