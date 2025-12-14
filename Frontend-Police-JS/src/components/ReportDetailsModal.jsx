@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { getReportMedia } from '../services/mediaService'
+import { useAuth } from '../contexts/AuthContext'
 
 // Backend status options (capitalized strings)
 const STATUS_OPTIONS = [
@@ -25,16 +26,48 @@ const STATUS_OPTIONS = [
   { value: 'Canceled', label: 'Canceled' },
 ]
 
-const ReportDetailsModal = ({ report, onClose, onStatusChange, onOpenChat }) => {
+const ReportDetailsModal = ({ report, onClose, onStatusChange, onOpenChat, onDistanceEtaUpdate }) => {
   const [selectedStatus, setSelectedStatus] = useState(report.status || 'Pending')
   const [showAttachments, setShowAttachments] = useState(false)
   const [attachments, setAttachments] = useState([])
   const [attachmentsLoading, setAttachmentsLoading] = useState(false)
   const [attachmentsError, setAttachmentsError] = useState(null)
+  const { user } = useAuth()
+  const [computedDistance, setComputedDistance] = useState(null)
+  const [computedEta, setComputedEta] = useState(null)
 
   useEffect(() => {
     setSelectedStatus(report.status || 'Pending')
   }, [report.status])
+
+  // If distance/eta are missing, compute a simple fallback using haversine + assumed speed.
+  useEffect(() => {
+    const officeLat = user?.latitude != null ? Number(user.latitude) : null
+    const officeLng = user?.longitude != null ? Number(user.longitude) : null
+    const repLat = report?.location?.lat != null ? Number(report.location.lat) : null
+    const repLng = report?.location?.lng != null ? Number(report.location.lng) : null
+    if (officeLat == null || officeLng == null || repLat == null || repLng == null) return
+    if (report?.distance && report?.eta) return
+
+    const toRad = (v) => (v * Math.PI) / 180
+    const R = 6371
+    const dLat = toRad(repLat - officeLat)
+    const dLng = toRad(repLng - officeLng)
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(officeLat)) * Math.cos(toRad(repLat)) * Math.sin(dLng / 2) ** 2
+    const c = 2 * Math.asin(Math.sqrt(a))
+    const km = R * c
+
+    const distanceText = `${km.toFixed(1)} km`
+    // assume ~35km/h average city response speed + small dispatch overhead
+    const minutes = Math.max(1, Math.round((km / 35) * 60 + 3))
+    const etaText = `${minutes} mins`
+
+    setComputedDistance(distanceText)
+    setComputedEta(etaText)
+    if (onDistanceEtaUpdate && report?.id) onDistanceEtaUpdate(report.id, distanceText, etaText)
+  }, [user?.latitude, user?.longitude, report?.id, report?.distance, report?.eta, report?.location?.lat, report?.location?.lng, onDistanceEtaUpdate])
 
   // Fetch attachments for this report when modal opens
   useEffect(() => {
@@ -73,6 +106,7 @@ const ReportDetailsModal = ({ report, onClose, onStatusChange, onOpenChat }) => 
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'Asia/Manila',
     })
 
   const getCategoryIcon = (category) => {
@@ -160,7 +194,7 @@ const ReportDetailsModal = ({ report, onClose, onStatusChange, onOpenChat }) => 
                 <div className="flex items-center">
                   <MapPin className="h-4 w-4 text-gray-500 mr-2" />
                   <p className="text-sm font-medium text-gray-900">
-                    {[report.reporterAddress?.barangay, report.reporterAddress?.city, report.reporterAddress?.region]
+                    {[report.reporterAddress?.region, report.reporterAddress?.city, report.reporterAddress?.barangay]
                       .filter(Boolean)
                       .join(', ') || 'N/A'}
                   </p>
@@ -225,30 +259,6 @@ const ReportDetailsModal = ({ report, onClose, onStatusChange, onOpenChat }) => 
                     </p>
                   </div>
                 </div>
-              </div>
-
-              <div className="glass-card bg-blue-50/50 border-blue-200/50">
-                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
-                  <Navigation className="h-4 w-4 mr-2 text-blue-600" />
-                  Response Information
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Distance (Police → Report)</label>
-                    <p className="text-sm font-medium text-gray-900">
-                      {report.distance || <span className="text-gray-400 italic">Not calculated</span>}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">ETA (Estimated Time)</label>
-                    <p className="text-sm font-medium text-gray-900">
-                      {report.eta || <span className="text-gray-400 italic">Not calculated</span>}
-                    </p>
-                  </div>
-                </div>
-                {(!report.distance || !report.eta) && (
-                  <p className="text-xs text-gray-500 mt-3">Click "Directions" button to calculate distance and ETA</p>
-                )}
               </div>
 
               <div>

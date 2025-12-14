@@ -265,6 +265,10 @@ class ReportViewSet(viewsets.ModelViewSet):
         is_valid, user_id, role, error_response = validate_jwt_token(request)
         if not is_valid:
             return error_response
+
+        # Store user info for get_queryset to filter by office (and avoid leaking other offices)
+        request.user_id = user_id
+        request.user_role = role
         
         return super().retrieve(request, *args, **kwargs)
 
@@ -292,9 +296,15 @@ class ReportViewSet(viewsets.ModelViewSet):
                     queryset = queryset.filter(assigned_office=office)
                 except PoliceOffice.DoesNotExist:
                     pass
-            
-            # Exclude resolved and canceled to keep active list clean
-            return queryset.exclude(status__in=['Resolved', 'Canceled']).order_by('-created_at')
+
+            # IMPORTANT:
+            # - For list views (Dashboard/Map), hide resolved/canceled.
+            # - For retrieve view (View Details) we MUST allow resolved reports too,
+            #   otherwise Resolved Cases page can't open the details modal.
+            if getattr(self, 'action', None) == 'list':
+                return queryset.exclude(status__in=['Resolved', 'Canceled']).order_by('-created_at')
+
+            return queryset.order_by('-created_at')
         
         return queryset
 

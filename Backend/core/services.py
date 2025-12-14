@@ -21,6 +21,41 @@ from .models import Report, PoliceOffice
 # Load the API Key from settings (stored in environment variables for security)
 GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
 
+def generate_qr_code_base64(text: str) -> str:
+    """Generate a QR code (data URL) for any text/URL for printing in PDFs."""
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(text)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    base64_encoded_data = base64.b64encode(buffer.getvalue()).decode()
+    return f"data:image/png;base64,{base64_encoded_data}"
+
+
+# ============================================================================
+# MEDIA UPLOAD LIMITS (Citizen uploads) - HARD CODED
+# ============================================================================
+#
+# You requested these rules to be hardcoded so the backend still enforces them
+# even if the .env is missing:
+# - Max 3 images per report
+# - Max 2 videos per report
+# - Max 15MB per file
+#
+
+def get_media_limits():
+    return {
+        "max_images": 3,
+        "max_videos": 2,
+        "max_bytes": 15 * 1024 * 1024,
+    }
+
 # ============================================================================
 # GEOLOCATION & NAVIGATION: Google Maps Integration
 # ============================================================================
@@ -49,34 +84,7 @@ def generate_directions_and_qr(start_lat, start_lng, end_lat, end_lng):
     # Currently skipped; we just use the URL in the QR code
     # TODO: Add ETA calculation if budget allows
 
-    # Step 3: Generate QR Code (in memory)
-    # QR Code = 2D barcode that encodes the Google Maps URL
-    # When scanned with a phone, it opens the directions link
-    qr = qrcode.QRCode(
-        version=1,  # Size of QR code (1 = smallest)
-        error_correction=qrcode.constants.ERROR_CORRECT_L,  # Error correction level
-        box_size=10,  # Pixel size of each "square" in the QR code
-        border=4,  # White space border around edges
-    )
-    qr.add_data(maps_url)  # Encode the Google Maps URL
-    qr.make(fit=True)  # Generate the QR code pattern
-
-    # Create the QR code image using Pillow library
-    img = qr.make_image(fill_color="black", back_color="white")
-
-    # Step 4: Save image to memory (BytesIO is like a temporary file in RAM)
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")  # Save as PNG image format
-
-    # Step 5: Convert to Base64 (text-based image encoding)
-    # Why? Because JSON responses can't contain binary image data
-    # Base64 = text representation that browsers can display directly
-    base64_encoded_data = base64.b64encode(buffer.getvalue()).decode()
-
-    # Step 6: Create Data URL (special format for embedding images in HTML)
-    # Data URL = "data:image/png;base64,ENCODED_DATA"
-    # Can be used directly in <img src="..."> tags
-    qr_data_url = f"data:image/png;base64,{base64_encoded_data}"
+    qr_data_url = generate_qr_code_base64(maps_url)
 
     # Return all data needed for the frontend
     return {

@@ -23,6 +23,7 @@ from .models import (
     Media,
     SummaryAnalytics
 )
+from .services import get_media_limits
 
 
 # ============================================================================
@@ -321,10 +322,13 @@ class MediaSerializer(serializers.ModelSerializer):
         if uploaded_file is None:
             raise ValidationError({"uploaded_file": "This field is required."})
 
+        limits = get_media_limits()
+        max_bytes = limits["max_bytes"]
+
         # Validate file size (protect free hosting)
-        max_bytes = int(os.getenv('MEDIA_MAX_UPLOAD_BYTES', str(25 * 1024 * 1024)))  # 25MB default
         if getattr(uploaded_file, 'size', 0) and uploaded_file.size > max_bytes:
-            raise ValidationError({"uploaded_file": f"File too large. Max size is {max_bytes} bytes."})
+            max_mb = int(max_bytes / (1024 * 1024))
+            raise ValidationError({"uploaded_file": f"File too large. Max size is {max_mb}MB per file."})
 
         # Validate content-type matches file_type
         file_type = (validated_data.get('file_type') or '').lower().strip()
@@ -337,6 +341,16 @@ class MediaSerializer(serializers.ModelSerializer):
         report_obj = validated_data.get('report')
         if not report_obj:
             raise ValidationError({"report": "Report is required."})
+
+        # Enforce per-report quantity limits (even if client uploads files one-by-one)
+        max_images = limits["max_images"]
+        max_videos = limits["max_videos"]
+        existing_images = Media.objects.filter(report=report_obj, file_type='image').count()
+        existing_videos = Media.objects.filter(report=report_obj, file_type='video').count()
+        if file_type == 'image' and existing_images >= max_images:
+            raise ValidationError({"uploaded_file": f"Too many images for this report. Max is {max_images} images."})
+        if file_type == 'video' and existing_videos >= max_videos:
+            raise ValidationError({"uploaded_file": f"Too many videos for this report. Max is {max_videos} videos."})
 
         # Build storage path
         # Use the same UUID for BOTH:
@@ -368,6 +382,11 @@ class MediaSerializer(serializers.ModelSerializer):
             if isinstance(res, dict) and res.get('error'):
                 raise Exception(res.get('error'))
         except Exception as e:
+            msg = str(e)
+            if 'Bucket not found' in msg:
+                raise ValidationError(
+                    {"uploaded_file": f"Supabase bucket '{bucket}' not found. Create it in Supabase Storage (and make it public), then try again."}
+                )
             raise ValidationError({"uploaded_file": f"Upload failed: {e}"})
 
         # Get URL (public if bucket is public). If bucket is private, you can switch to signed URLs later.

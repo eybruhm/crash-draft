@@ -24,41 +24,45 @@ Goals:
      - Keep all UI logic intact
      - Test each page renders correctly
 
-✅ 5. Planning Stage (Create Integration Roadmap) 
+✅ 5. Planning Stage (Create Integration Roadmap For Police) 
      - Map each frontend feature to backend endpoint
      - Identify missing backend logic (nearest office, etc.)
      - Create day-by-day execution plan
      - Define success criteria for each day
 
-⏳ 6. Execute Created Roadmap from Planning Stage Day-by-Day (We are here!!!)
+✅ 6. Execute Created Roadmap from Planning Stage Day-by-Day For Police
      - Day 1: Authentication flow (✅)
      - Day 2: Dashboard + Active Reports (✅)
      - Day 3: Map + Checkpoints (✅)
      - Day 4: Chat + Messages (✅)
      - Day 5: Analytics & Resolved Cases (✅)
-     - Day 6: Media Uploads & Final Cleanup (we are hereeee!!!)
-     - Day 6.5: Mobile/Citizen Backend Readiness
-     - Day 7: Backend refinements (nearest office logic)
-     - (Each day: code → test → document → move to next)
+     - Day 6: Media Uploads & Final Cleanup (✅)
+     - Day 6.5: Mobile/Citizen Backend Readiness (THIS IS CANCELLED AND OPTIONAL NOW)
 
-⏳ 7. Overall Testing
+⏳ 7. Planning Stage (Create Integration Roadmap For Admin) 
+     - [To be made]
+	
+⏳ 8. Execute Created Roadmap from Planning Stage Day-by-Day For Admin
+     - [To be made]
+
+⏳ 9. Overall Testing
      - End-to-end user flows
      - Edge cases and error handling
      - Performance testing (polling interval)
      - Mobile app integration testing
 
-⏳ 8. Deployment Preparation
+⏳ 10. Deployment Preparation
      - Environment variables setup
      - CORS configuration
      - Database migrations on production
      - Static file hosting
 
-⏳ 9. Deploy
+⏳ 11. Deploy
      - Backend: Render.com
      - Frontend: Netlify/Vercel
      - Test production environment
 
-⏳ 10. Final Documentation
+⏳ 12. Final Documentation
      - Setup guide for development
      - Deployment guide
      - API documentation
@@ -317,7 +321,7 @@ Sub-steps:
 4.	Add comments to PDF template logic if unclear
 Description: Ensure PDFs work before frontend calls them.
 ________________________________________
-DAY 6 (UPDATED): Media Uploads & Final Cleanup (Police Web) (we are here!!)
+DAY 6 (UPDATED): Media Uploads & Final Cleanup (Police Web) (✅)
 Goal: Implement real evidence uploads (image/video) and polish the Police web.
 Step 0 (NEW): Backend – Implement real Supabase Storage upload for tbl_media
 Sub-steps:
@@ -370,7 +374,7 @@ Sub-steps:
 1.	Remove debug logs
 2.	Add short comments to tricky parts
 ________________________________________
-DAY 6.5 (NEW): Mobile/Citizen Backend Readiness (Supabase Auth + Django APIs)
+DAY 6.5 (NEW): Mobile/Citizen Backend Readiness (Supabase Auth + Django APIs) (THIS IS CANCELLED AND OPTIONAL NOW)
 Goal: Citizens authenticate with Supabase Auth (email verification), then use Django APIs for profile, reports, media, and chat.
 Step 0: Create a mobile views layer folder (as you requested)
 Sub-steps:
@@ -428,7 +432,7 @@ Sub-steps:
 1.	POST /api/v1/mobile/reports/{id}/cancel/ (or PATCH status to Canceled)
 2.	Only the report owner can cancel
 ________________________________________
-DAY 7: Testing, Bug Fixing & Documentation
+DAY 7: Testing, Bug Fixing & Documentation 
 Goal: Ensure everything works end-to-end and document the system
 Step 1: End-to-End Testing Scenarios
 Sub-steps:

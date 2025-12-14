@@ -357,14 +357,14 @@ const Analytics = () => {
                   onClick={handleRebuildCache}
                   disabled={isRebuilding || rebuildCooldownRemaining > 0}
                   className="btn-outline flex items-center gap-2"
-                  title="Rebuild analytics cache (use if you edited reports directly in Supabase)"
+                  title="Refresh analytics cache (use if you edited reports directly in Supabase)"
                 >
                   <RefreshCw className={`h-4 w-4 ${isRebuilding ? 'animate-spin' : ''}`} />
                   {isRebuilding
-                    ? 'Rebuilding...'
+                    ? 'Refreshing...'
                     : rebuildCooldownRemaining > 0
-                      ? `Rebuild (${Math.ceil(rebuildCooldownRemaining / 1000)}s)`
-                      : 'Rebuild Cache'}
+                      ? `Refresh (${Math.ceil(rebuildCooldownRemaining / 1000)}s)`
+                      : 'Refresh'}
                 </button>
               </div>
             </div>

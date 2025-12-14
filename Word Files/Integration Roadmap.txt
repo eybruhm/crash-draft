@@ -322,7 +322,10 @@ Sub-steps:
 1.	POST /api/v1/mobile/reports/{id}/cancel/ (or PATCH status to Canceled)
 2.	Only the report owner can cancel
 ________________________________________
-DAY 7: Testing, Bug Fixing & Documentation
+
+[ADMIN ROADMAP]
+________________________________________
+DAY 7: Testing, Bug Fixing & Documentation (To be updated and modified. Do this after integration of Admin and Backend.)
 Goal: Ensure everything works end-to-end and document the system
 Step 1: End-to-End Testing Scenarios
 Sub-steps:
@@ -411,7 +414,9 @@ ________________________________________
 ✅ Cleanup While Integrating: Every day includes cleanup sub-steps
 ✅ Learning Mindset: Learning notes section + explanations in each step
 
-Documentation Every after day we finish::
+________________________________________
+[See "Documentation After Day.txt" for a sample]
+Documentation Every after day we finish:
 Day - Title/Goal
 What was Done (each step and sub-step)
 Files created and modified (this just my addition)

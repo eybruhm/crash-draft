@@ -539,6 +539,11 @@
 **Purpose**: Upload a media file (image/video)  
 **Access**: Authenticated
 
+**Upload Rules (Enforced by Backend)**:
+- Max **3 images** per report
+- Max **2 videos** per report
+- Max **15MB per file** (hardcoded in backend)
+
 **Request** (multipart/form-data):
 ```
 uploaded_file: <binary file>

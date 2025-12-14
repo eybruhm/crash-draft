@@ -17,7 +17,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.exceptions import ValidationError
 
 from ..models import Report, Media, PoliceOffice, User
-from ..services import reverse_geocode, find_nearest_office
+from ..services import reverse_geocode, find_nearest_office, get_media_limits
 from ..serializers import _supabase
 
 
@@ -66,6 +66,53 @@ class MobileCreateReportWithMediaAPIView(APIView):
         if not User.objects.filter(user_id=reporter_uuid).exists():
             return Response({"detail": "Reporter not found in tbl_users"}, status=status.HTTP_404_NOT_FOUND)
 
+        uploaded = []
+        files = []
+        if 'uploaded_files' in request.FILES:
+            files = request.FILES.getlist('uploaded_files')
+        elif 'uploaded_file' in request.FILES:
+            files = [request.FILES['uploaded_file']]
+
+        bucket = os.getenv('SUPABASE_MEDIA_BUCKET', 'crash-media')
+        limits = get_media_limits()
+        max_bytes = limits["max_bytes"]
+        max_images = limits["max_images"]
+        max_videos = limits["max_videos"]
+
+        # Validate ALL files first (so we don't create a report if the media is invalid)
+        images_count = 0
+        videos_count = 0
+        normalized = []  # list of dicts: {file, file_type, content_type}
+        for f in files:
+            # Size limit
+            if getattr(f, 'size', 0) and f.size > max_bytes:
+                max_mb = int(max_bytes / (1024 * 1024))
+                return Response(
+                    {"detail": f"File too large. Max size is {max_mb}MB per file."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            content_type = (getattr(f, 'content_type', '') or '').lower()
+            if content_type.startswith('image/'):
+                file_type = 'image'
+                images_count += 1
+            elif content_type.startswith('video/'):
+                file_type = 'video'
+                videos_count += 1
+            else:
+                return Response(
+                    {"detail": "Only image/video files are allowed."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            normalized.append({"file": f, "file_type": file_type, "content_type": content_type})
+
+        if images_count > max_images or videos_count > max_videos:
+            return Response(
+                {"detail": f"Too many media files. Max is {max_images} images and {max_videos} videos per report."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Geocode + assign nearest office (same idea as ReportViewSet.perform_create)
         location_city, location_barangay = reverse_geocode(latitude, longitude)
         assigned_office = find_nearest_office(latitude, longitude) or PoliceOffice.objects.all().first()
@@ -81,28 +128,10 @@ class MobileCreateReportWithMediaAPIView(APIView):
             location_barangay=location_barangay,
         )
 
-        uploaded = []
-        files = []
-        if 'uploaded_files' in request.FILES:
-            files = request.FILES.getlist('uploaded_files')
-        elif 'uploaded_file' in request.FILES:
-            files = [request.FILES['uploaded_file']]
-
-        bucket = os.getenv('SUPABASE_MEDIA_BUCKET', 'crash-media')
-        max_bytes = int(os.getenv('MEDIA_MAX_UPLOAD_BYTES', str(25 * 1024 * 1024)))  # 25MB default
-
-        for f in files:
-            # Size limit
-            if getattr(f, 'size', 0) and f.size > max_bytes:
-                raise ValidationError({"uploaded_file": f"File too large. Max size is {max_bytes} bytes."})
-
-            content_type = (getattr(f, 'content_type', '') or '').lower()
-            if content_type.startswith('image/'):
-                file_type = 'image'
-            elif content_type.startswith('video/'):
-                file_type = 'video'
-            else:
-                raise ValidationError({"uploaded_file": "Only image/video files are allowed."})
+        for item in normalized:
+            f = item["file"]
+            file_type = item["file_type"]
+            content_type = item["content_type"]
 
             # Storage path
             orig_name = getattr(f, 'name', '') or 'upload'
@@ -126,6 +155,12 @@ class MobileCreateReportWithMediaAPIView(APIView):
                 if isinstance(res, dict) and res.get('error'):
                     raise Exception(res.get('error'))
             except Exception as e:
+                msg = str(e)
+                if 'Bucket not found' in msg:
+                    return Response(
+                        {"detail": f"Supabase bucket '{bucket}' not found. Create it in Supabase Storage (and make it public), then try again."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
                 raise ValidationError({"uploaded_file": f"Upload failed: {e}"})
 
             # URL

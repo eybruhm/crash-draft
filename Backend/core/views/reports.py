@@ -12,7 +12,7 @@ from django.db.models import DurationField, ExpressionWrapper, F
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from ..models import Report, PoliceOffice
+from ..models import Report, PoliceOffice, Media
 from ..services import (
     parse_filters,
     apply_common_filters,
@@ -21,6 +21,7 @@ from ..services import (
     render_pdf,
     build_resolved_filename,
     short_uuid,
+    generate_qr_code_base64,
 )
 from ..views import validate_jwt_token
 
@@ -273,6 +274,29 @@ class SingleReportExportAPIView(APIView):
         office_id_short = short_uuid(office_id_str, start=7, end=7)
 
         # Build context (data) to pass to the PDF template
+        image_media = list(
+            Media.objects.filter(report_id=report.report_id, file_type='image')
+            .exclude(file_url__isnull=True)
+            .exclude(file_url__exact='')
+            .order_by('uploaded_at')[:3]
+            .values('media_id', 'file_url', 'uploaded_at')
+        )
+        video_media_rows = list(
+            Media.objects.filter(report_id=report.report_id, file_type='video')
+            .exclude(file_url__isnull=True)
+            .exclude(file_url__exact='')
+            .order_by('uploaded_at')[:2]
+            .values('media_id', 'file_url', 'uploaded_at')
+        )
+        video_media = []
+        for row in video_media_rows:
+            # For printing: include QR code instead of raw link
+            url = row.get('file_url')
+            video_media.append({
+                "media_id": row.get("media_id"),
+                "qr_code_base64": generate_qr_code_base64(url) if url else None,
+            })
+
         context = {
             'report': report,  # The full report object (all fields)
             'reporter': report.reporter,  # The citizen who reported
@@ -281,6 +305,8 @@ class SingleReportExportAPIView(APIView):
             'calculated_resolution_time': calculated_resolution_time,  # "2d 3h 45m"
             'current_datetime': timezone.now(),  # When the report was exported
             'office_id_str': office_id_str,  # Full office ID (for backend use)
+            'image_media': image_media,
+            'video_media': video_media,
         }
 
         # Render the HTML template with the data, convert to PDF

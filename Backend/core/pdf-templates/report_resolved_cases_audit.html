@@ -89,7 +89,47 @@
         <p style="font-style: italic;">{{ report.remarks|default:"No formal remarks were recorded for this resolution." }}</p>
     </div>
 
-    <h2>III. Reporter Information (For Confidential Use Only)</h2>
+    <h2>III. Evidence Media (Images/Videos)</h2>
+    <style>
+        .media-note { font-size: 9pt; color: #666; margin-top: 6px; }
+        .media-grid { margin-top: 10px; display: block; }
+        .media-item { display: inline-block; width: 40%; vertical-align: top; margin: 0 1% 12px 0; }
+        .media-thumb { width: 100%; max-width: 260px; height: auto; border: 1px solid #ddd; padding: 4px; background: #fff; }
+        .media-meta { font-size: 8pt; color: #444; margin-top: 4px; word-break: break-all; }
+        .media-url { font-size: 8pt; color: #666; word-break: break-all; }
+    </style>
+
+    {% if image_media and image_media|length > 0 %}
+        <div class="media-note">Showing up to 3 uploaded images (thumbnails).</div>
+        <div class="media-grid">
+            {% for m in image_media %}
+                <div class="media-item">
+                    <img class="media-thumb" src="{{ m.file_url }}" alt="Evidence Image {{ forloop.counter }}">
+                    <!-- <div class="media-meta"><strong>media_id:</strong> {{ m.media_id }}</div> -->
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No image media was uploaded for this report.</p>
+    {% endif %}
+
+    {% if video_media and video_media|length > 0 %}
+        <div class="media-note">Videos cannot be embedded in PDFs. Scan the QR code to open the video (up to 2).</div>
+        <div class="media-grid">
+            {% for m in video_media %}
+                <div class="media-item">
+                    {% if m.qr_code_base64 %}
+                        <img class="media-thumb" src="{{ m.qr_code_base64 }}" alt="Video QR {{ forloop.counter }}">
+                    {% endif %}
+                    <!-- <div class="media-meta"><strong>media_id:</strong> {{ m.media_id }}</div> -->
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No video media was uploaded for this report.</p>
+    {% endif %}
+
+    <h2>IV. Reporter Information (For Confidential Use Only)</h2>
     <table>
         <tbody>
             <tr>
