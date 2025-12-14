@@ -1,0 +1,108 @@
+📱 CRASH Mobile App
+│
+├── 🔄 Permissions & Boot Flow
+│ 	├── Request: GPS / Location Permission
+│ 	├── Check: Internet Connection
+│ 	├── Check: Auth State (Logged In or Not)
+│ 	└── Conditional:
+│        	├── If logged in → Go to Home
+│        	└── If not logged in → Go to Authentication Page
+│
+├── 🔐 Authentication
+│ 	├── Login Page
+│ 	│     ├── Email/Phone + Password
+│ 	│     ├── Button: Login
+│ 	│     └── Link: Go to Signup
+│ 	└── Signup Page
+│       	├── Required Fields:
+│       	│     ├── Email
+│       	│     ├── Phone Number
+│       	│     ├── First Name
+│       	│     ├── Last Name
+│       	│     ├── Gender
+│       	│     ├── Age
+│       	│     ├── Emergency Contact Name
+│       	│     ├── Emergency Contact Number
+│       	│     ├── Region, City, Barangay
+│       	│     ├── Password + Confirm Password
+│       	├── Button: Create Account
+│       	└── After Signup → Auto-login → Home
+│
+├── 🌐 Conditional Mode (Online / Offline)
+│ 	├── If NO Internet → Offline Mode
+│ 	└── If YES Internet → Online Mode
+│
+├── 🚫 OFFLINE MODE
+│ 	├── Page 1: Home / SOS (Default)
+│ 	│     ├── Big Red SOS Button
+│ 	│     ├── Toggle: Dial 911 / Text 911 (default: Dial)
+│ 	│     └── SOS action depends on toggle selection
+│ 	│
+│ 	├── Page 2: Send Report Online (HIDDEN/disabled)
+│ 	│     └── Not accessible in offline
+│ 	│
+│ 	└── Page 3: Profile Details
+│       	├── Shows saved user info
+│       	└── Fields NOT editable while offline
+│
+├── 🌐 ONLINE MODE
+│ 	├── Page 1: Home / SOS (Default)
+│ 	│     ├── Big Red SOS Button
+│ 	│     ├── Automatically sends:
+│ 	│     │ 	├── User ID
+│ 	│     │ 	├── User default info
+│ 	│     │ 	├── GPS location (lat/lng)
+│ 	│     │ 	└── Default category & role
+│ 	│     └── Extra details optional (handled in Page 2)
+│ 	│
+│ 	├── Page 2: Send Report Online
+│ 	│     ├── Attach Photo (optional)
+│ 	│     ├── Attach Video (optional)
+│ 	│     ├── Description (optional)
+│ 	│     ├── Category dropdown:
+│ 	│     │ 	├── Violence
+│ 	│     │ 	├── Threat
+│ 	│     │ 	├── Theft
+│ 	│     │ 	├── Vandalism   
+│ 	│     │ 	├── Suspicious
+│ 	│     │ 	├── Emergency (default)
+│ 	│     │ 	└── Others
+│ 	│     ├── Role:
+│ 	│     │ 	├── Victim (default)
+│ 	│     │ 	└── Witness
+│ 	│     └── Button: Send Report
+│ 	│
+│ 	└── Page 3: Profile Details
+│       	├── View User Details
+│       	├── Toggle: Quick Access Notification (default ON)
+│       	├── Button: Edit Information
+│       	└── Button: Logout
+│		├── Clears local session
+│		└── Returns to Login Page
+│
+├── 🚨 ACTIVE CASE MODE (Overrides Online UI)
+│ 	├── Global Condition:
+│ 	│     ├── If user has 1 active case:
+│ 	│     │ 	├── Disable SOS button (Page 1)
+│ 	│     │ 	└── Disable “Send Report” (Page 2)
+│ 	│
+│ 	├── Page 1 Changes:
+│ 	│     ├── SOS Button becomes disabled
+│ 	│     └── Cancel Report button appears
+│ 	│
+│ 	├── Page 2 Changes:
+│ 	│     ├── Fields become non-editable (gray view)
+│ 	│     ├── Fields show the submitted report details
+│ 	│     └── Cancel Report button appears
+│ 	│
+│ 	└── Floating Chat Head (Visible Across All Pages)
+│       	├── Opens conversation modal:
+│       	│     ├── Police Office Name
+│       	│     ├── Report Status (Pending • Responding • Resolved)
+│       	│     ├── Message history
+│       	│     └── Send Message input + button
+│       	└── Works like a mini-messenger overlay
+│
+└── 🚪 Logout
+  	
+

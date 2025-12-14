@@ -39,6 +39,9 @@ from .views.reports import (
     SingleReportExportAPIView,
 )
 
+# Mobile (citizen) views
+from .views.mobile import MobileCreateReportWithMediaAPIView
+
 
 # ============================================================================
 # ROUTER SETUP: Auto-generate URL patterns for CRUD operations
@@ -173,6 +176,12 @@ urlpatterns = [
     # GET /reports/{report_id}/export/ => SingleReportExportAPIView (PDF case file for one report)
     # UUID format: e.g., /reports/a1b2c3d4-e5f6-7890-1234-567890abcdef/export/
     path('reports/<uuid:report_id>/export/', SingleReportExportAPIView.as_view()),
+
+    # =====================================================
+    # MOBILE (CITIZEN) ENDPOINTS
+    # =====================================================
+    # POST /mobile/reports/ => Create report with optional media (multipart)
+    path('mobile/reports/', MobileCreateReportWithMediaAPIView.as_view(), name='mobile-create-report'),
 
     # =====================================================
     # AUTO-GENERATED ROUTER URLS (ViewSet Endpoints)

@@ -35,8 +35,9 @@ Goals:
      - Day 2: Dashboard + Active Reports (✅)
      - Day 3: Map + Checkpoints (✅)
      - Day 4: Chat + Messages (✅)
-     - Day 5: Analytics (We are here!!!)
-     - Day 6: Resolved Cases + PDFs
+     - Day 5: Analytics & Resolved Cases (✅)
+     - Day 6: Media Uploads & Final Cleanup (we are hereeee!!!)
+     - Day 6.5: Mobile/Citizen Backend Readiness
      - Day 7: Backend refinements (nearest office logic)
      - (Each day: code → test → document → move to next)
 
@@ -83,9 +84,7 @@ Step 4: Port Next.js Frontend to Vite (⏳ not sure if were done already)
 	Day 6: Analytics UI (✅)
 	Day 7: Resolved Cases + PDFs UI hooks (mock data), cross-page smoke tests (✅)
 Step 5: Integration Planning (✅)
-Step 6+: Full Integration Execution (TBD/later)
-(Will define days/steps after Step 5 is finalized)
-
+Step 6+: Full Integration Execution (we are here)
 
 
 
@@ -283,7 +282,7 @@ Sub-steps:
 3.	Add comment explaining fallback logic
 Description: Accurate routing data improves police response.
 ________________________________________
-DAY 5: Analytics & Resolved Cases Integration (we are here. im not sure if we finish this)
+DAY 5: Analytics & Resolved Cases Integration (✅)
 Goal: Wire statistics, charts, and PDF exports
 Step 1: Frontend - Create Analytics Service
 Sub-steps:
@@ -318,57 +317,116 @@ Sub-steps:
 4.	Add comments to PDF template logic if unclear
 Description: Ensure PDFs work before frontend calls them.
 ________________________________________
-DAY 6: Media Uploads & Final Cleanup
-Goal: Implement file uploads and polish the entire app
-Step 1: Frontend - Create Upload UI Component
+DAY 6 (UPDATED): Media Uploads & Final Cleanup (Police Web) (we are here!!)
+Goal: Implement real evidence uploads (image/video) and polish the Police web.
+Step 0 (NEW): Backend – Implement real Supabase Storage upload for tbl_media
 Sub-steps:
-1.	In ReportDetailsModal, add file input for attachments
-2.	Create src/services/mediaService.js - uploadMedia(reportId, file, senderId)
-3.	Handle file type validation (images/videos only)
-4.	Show upload progress indicator
-5.	Display uploaded files in modal
-Description: Currently no upload UI exists. This completes the feature.
-Step 2: Frontend - Wire Media Upload
+1.	Choose a Supabase Storage bucket (ex: crash-media).
+2.	Implement upload code so POST /api/v1/media/:
+•	accepts multipart/form-data (uploaded_file, report, file_type, sender_id)
+•	uploads bytes to Supabase Storage
+•	saves returned public/signed URL into tbl_media.file_url
+3.	Validate:
+•	file_type must be image or video
+•	file size limit (to protect free hosting)
+4.	Protect endpoint:
+•	require JWT
+•	(recommended) only allow police to upload for reports assigned to their office
+5.	Testing:
+•	Postman upload → confirm file exists in Supabase Storage
+•	confirm row exists in tbl_media with correct file_url
+Step 1: Frontend – Create Media service
 Sub-steps:
-1.	On file select, call uploadMedia() with FormData
-2.	Backend returns file_url from Supabase
-3.	Add URL to report's media list in state
-4.	Display thumbnail or link to view file
-Description: Evidence files now stored in cloud and linked to reports.
-Step 3: Frontend - Remove All Mock Data
+1.	Create src/services/mediaService.js
+2.	Add:
+•	getReportMedia(reportId)
+•	uploadMedia(reportId, file, fileType, senderId) (FormData)
+Step 2: Frontend – Display existing attachments in ReportDetailsModal
 Sub-steps:
-1.	Delete TemporaryDatabase.js
-2.	Search codebase for "TemporaryDatabase" imports and remove
-3.	Verify no hardcoded mock arrays remain
-Description: Clean separation - no mock data mixed with real data.
-Step 4: Frontend - Add Loading & Error States Everywhere
+1.	When modal opens, call getReportMedia(report.id)
+2.	Render:
+•	image preview thumbnails
+•	video links (open in new tab)
+Step 3: Frontend – Upload UI in ReportDetailsModal
 Sub-steps:
-1.	Every API call should have: loading spinner, error message, success state
-2.	Create reusable components: <Spinner />, <ErrorBanner />
-3.	Consistent UX across all pages
-Description: Professional app handles all states gracefully.
-Step 5: Backend - Final Security & Config Review
+1.	Add “Upload Evidence” button + file picker
+2.	Validate file type (image/video only)
+3.	Show progress/loading state
+4.	After upload success, refresh attachment list
+Step 4: Cleanup – confirm no mock data remains
 Sub-steps:
-1.	Set DEBUG = False in settings (for production checklist, not now)
-2.	Verify SECRET_KEY is from environment, not hardcoded
-3.	Add ALLOWED_HOSTS for production domain
-4.	Review CORS: add production frontend URL
-5.	Add rate limiting (optional - DRF throttle classes)
-Description: Prepare backend for deployment.
-Step 6: Frontend - Environment Variables Setup
+1.	Search TemporaryDatabase references (should be none)
+2.	Remove any leftover mock arrays used by pages/components
+Step 5: UX polish – loading/error states
 Sub-steps:
-1.	Create .env.example with template for required vars
-2.	Document: VITE_API_BASE_URL, VITE_GOOGLE_MAPS_API_KEY
-3.	Update API service to read from import.meta.env.VITE_API_BASE_URL
-4.	Add .env to .gitignore (security)
-Description: Easy to switch between dev/production backends.
-Step 7: Code Cleanup & Comments
+1.	Confirm each page has loading/error/empty state
+2.	(Optional) add reusable Spinner and ErrorBanner
+Step 6: Frontend env setup (prep for deploy later)
 Sub-steps:
-1.	Add JSDoc comments to all service functions (what they do, params, returns)
-2.	Add inline comments to complex logic (status calculations, polling, etc.)
-3.	Remove console.logs used for debugging
-4.	Format code consistently (run Prettier/ESLint)
-Description: Code should be readable by another developer (or you in 6 months).
+1.	Add .env.example
+2.	Make API base URL use VITE_API_BASE_URL (not hardcoded localhost)
+Step 7: Code cleanup
+Sub-steps:
+1.	Remove debug logs
+2.	Add short comments to tricky parts
+________________________________________
+DAY 6.5 (NEW): Mobile/Citizen Backend Readiness (Supabase Auth + Django APIs)
+Goal: Citizens authenticate with Supabase Auth (email verification), then use Django APIs for profile, reports, media, and chat.
+Step 0: Create a mobile views layer folder (as you requested)
+Sub-steps:
+1.	Add new backend file: Backend/core/views/mobile.py
+2.	Keep citizen/mobile endpoints there (so it’s organized and separate from police/admin views)
+Step 1: Supabase Auth setup (citizen signup/login/verification)
+Sub-steps:
+1.	In Supabase dashboard:
+•	Enable Email Auth
+•	Enable Email confirmation (verification email link)
+2.	Mobile app:
+•	uses Supabase client to signUp(email, password)
+•	user clicks verification link in email
+•	uses Supabase signInWithPassword(...)
+•	mobile app gets a Supabase JWT access token (session token)
+Description: Supabase handles verification email; Django does not send OTP/emails.
+Step 2: Django – Verify Supabase token on mobile API requests
+Sub-steps:
+1.	Create a helper like validate_supabase_user(request) (reads Authorization: Bearer <supabase_token>)
+2.	Verify the Supabase JWT and extract the citizen’s auth_user_id
+3.	Use that identity to allow/deny access
+Step 3: Citizen Profile endpoints (stores details in tbl_users)
+Sub-steps:
+1.	GET /api/v1/mobile/profile/ → returns citizen profile from tbl_users
+2.	POST /api/v1/mobile/profile/ensure/:
+•	first time after signup/login, create the tbl_users row if missing
+3.	PATCH /api/v1/mobile/profile/ → update profile fields (name, phone, address, emergency contact)
+4.	Change password
+•	If using Supabase Auth: password change is done via Supabase (not Django)
+•	Django should only update profile fields, not passwords
+Important: Optional fields (like some details) may be NULL — backend should allow nulls.
+Step 4: Citizen reports (SOS + detailed report; description/media optional)
+Sub-steps:
+1.	POST /api/v1/mobile/reports/:
+•	required: lat/lng, category (default Emergency for SOS), reporter identity from token
+•	optional: description (can be null)
+2.	Enforce “Active Case Mode” rule:
+•	if citizen already has a report not Resolved/Canceled → block creating a new one (return a friendly error)
+Step 5: Citizen media upload (optional media)
+Sub-steps:
+1.	If user attaches image/video:
+•	call Django POST /api/v1/media/ with multipart form data
+•	Django uploads to Supabase Storage and creates tbl_media row
+2.	If no media, report still submits fine
+Step 6: Citizen chat (user ↔ police)
+Sub-steps:
+1.	Update backend to allow sender_type='user' in messages (currently it only allows police)
+2.	Add mobile endpoints:
+•	GET /api/v1/mobile/reports/{id}/messages/
+•	POST /api/v1/mobile/reports/{id}/messages/
+3.	Permission checks:
+•	citizen can only read/send messages for their own report
+Step 7: Citizen cancel report
+Sub-steps:
+1.	POST /api/v1/mobile/reports/{id}/cancel/ (or PATCH status to Canceled)
+2.	Only the report owner can cancel
 ________________________________________
 DAY 7: Testing, Bug Fixing & Documentation
 Goal: Ensure everything works end-to-end and document the system

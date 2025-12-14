@@ -21,7 +21,7 @@ const haversineKm = (lat1, lon1, lat2, lon2) => {
   return R * c
 }
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.GOOGLE_MAPS_API_KEY || import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const mapContainerStyle = { width: '100%', height: '320px' }
 
 // Marker icons for police office and report categories
@@ -237,7 +237,7 @@ const DirectionsModal = ({ report, onClose, onDistanceEtaUpdate }) => {
                 <div className="bg-white/40 backdrop-blur-sm rounded-lg border border-white/50 shadow-inner">
                   {!GOOGLE_MAPS_API_KEY ? (
                     <div className="h-[320px] flex items-center justify-center text-sm text-red-600 text-center px-4">
-                      Set GOOGLE_MAPS_API_KEY (or VITE_GOOGLE_MAPS_API_KEY) in .env and restart the dev server to view the map.
+                      Set VITE_GOOGLE_MAPS_API_KEY in .env and restart the dev server to view the map.
                     </div>
                   ) : loadError ? (
                     <div className="h-[320px] flex items-center justify-center text-sm text-red-600">

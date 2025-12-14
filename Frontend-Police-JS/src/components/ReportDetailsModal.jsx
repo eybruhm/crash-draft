@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { getReportMedia } from '../services/mediaService'
 
 // Backend status options (capitalized strings)
 const STATUS_OPTIONS = [
@@ -27,10 +28,33 @@ const STATUS_OPTIONS = [
 const ReportDetailsModal = ({ report, onClose, onStatusChange, onOpenChat }) => {
   const [selectedStatus, setSelectedStatus] = useState(report.status || 'Pending')
   const [showAttachments, setShowAttachments] = useState(false)
+  const [attachments, setAttachments] = useState([])
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false)
+  const [attachmentsError, setAttachmentsError] = useState(null)
 
   useEffect(() => {
     setSelectedStatus(report.status || 'Pending')
   }, [report.status])
+
+  // Fetch attachments for this report when modal opens
+  useEffect(() => {
+    const fetchMedia = async () => {
+      if (!report?.id) return
+      try {
+        setAttachmentsLoading(true)
+        setAttachmentsError(null)
+        const media = await getReportMedia(report.id)
+        setAttachments(Array.isArray(media) ? media : [])
+      } catch (err) {
+        setAttachmentsError(err.message || 'Failed to load attachments')
+      } finally {
+        setAttachmentsLoading(false)
+      }
+    }
+
+    fetchMedia()
+  }, [report?.id])
+
 
   const handleStatusChange = () => {
     if (selectedStatus !== report.status && onStatusChange) {
@@ -237,6 +261,75 @@ const ReportDetailsModal = ({ report, onClose, onStatusChange, onOpenChat }) => 
             </div>
           </div>
 
+          <div className="glass-card">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setShowAttachments(!showAttachments)}
+                className="flex items-center justify-between w-full text-left"
+              >
+                <h3 className="text-lg font-bold text-gray-900 flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-lg mr-3">
+                    <ImageIcon className="h-5 w-5 text-purple-600" />
+                  </div>
+                  Attachments ({attachments.length})
+                </h3>
+                {showAttachments ? (
+                  <ChevronUp className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
+            </div>
+
+            {attachmentsError && (
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {attachmentsError}
+              </div>
+            )}
+
+            {showAttachments && (
+              <div className="mt-4">
+                {attachmentsLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" />
+                  </div>
+                ) : attachments.length === 0 ? (
+                  <div className="text-sm text-gray-500 italic">No attachments uploaded for this report.</div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {attachments.map((m) => (
+                      <div
+                        key={m.media_id}
+                        className="rounded-lg bg-white/60 border border-gray-200 p-2 overflow-hidden"
+                      >
+                        {m.file_type === 'image' ? (
+                          <a href={m.file_url} target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={m.file_url}
+                              alt="attachment"
+                              className="w-full h-28 object-cover rounded-md"
+                            />
+                          </a>
+                        ) : (
+                          <a
+                            href={m.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary-700 hover:underline"
+                          >
+                            Open video
+                          </a>
+                        )}
+                        <div className="mt-2 text-xs text-gray-500 break-all">{m.file_url}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Backward compatibility: if report.attachments exists (old mock data), show it too */}
           {Array.isArray(report.attachments) && report.attachments.length > 0 && (
             <div className="glass-card">
               <button

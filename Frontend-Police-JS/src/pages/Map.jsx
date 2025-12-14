@@ -16,11 +16,10 @@ import { updateReportStatus } from '../services/reportsService'
 /**
  * 🔑 Google Maps API Key setup (do not hardcode keys in source):
  * 1) Create a .env file (not committed) at the project root.
- * 2) Add: GOOGLE_MAPS_API_KEY=your_api_key_here (Vite also respects VITE_GOOGLE_MAPS_API_KEY for compatibility).
+ * 2) Add: VITE_GOOGLE_MAPS_API_KEY=your_api_key_here
  * 3) Restart dev server so Vite picks up the env var.
- * 4) Vite injects it as import.meta.env.GOOGLE_MAPS_API_KEY (envPrefix configured) or import.meta.env.VITE_GOOGLE_MAPS_API_KEY.
  */
-const GOOGLE_MAPS_API_KEY = import.meta.env.GOOGLE_MAPS_API_KEY
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 const mapContainerStyle = { width: '100%', height: '100%' }
 
 const markerIcons = {
@@ -342,7 +341,7 @@ const MapPage = () => {
         <div className="max-w-md space-y-3">
           <p className="text-lg font-semibold text-red-600">Google Maps API key is missing.</p>
           <p className="text-sm text-gray-700">
-            Create a <code>.env</code> file in the project root with <code>GOOGLE_MAPS_API_KEY=your_key_here</code> (or <code>VITE_GOOGLE_MAPS_API_KEY</code>), then restart the dev server.
+            Create a <code>.env</code> file in the project root with <code>VITE_GOOGLE_MAPS_API_KEY=your_key_here</code>, then restart the dev server.
           </p>
         </div>
       </div>

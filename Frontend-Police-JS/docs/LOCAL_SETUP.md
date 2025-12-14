@@ -20,9 +20,11 @@ npm install
 ## 3) Environment variables
 Create a `.env` file in the project root (this is git-ignored):
 ```bash
+VITE_API_BASE_URL=http://localhost:8000/api/v1
 VITE_GOOGLE_MAPS_API_KEY=your_api_key_here
 ```
 Notes:
+- `VITE_API_BASE_URL` points the Police web to your Django backend.
 - Get a browser Maps JavaScript API key from Google Cloud.
 - After changing `.env`, restart `npm run dev` so Vite picks it up.
 

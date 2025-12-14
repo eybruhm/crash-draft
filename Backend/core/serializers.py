@@ -296,9 +296,93 @@ class MediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Media
         # 'uploaded_file' is for input; 'file_url' is what gets stored/returned
-        fields = ('media_id', 'file_url', 'report', 'file_type', 'sender_id', 'uploaded_file') 
+        fields = ('media_id', 'file_url', 'report', 'file_type', 'sender_id', 'uploaded_at', 'uploaded_file') 
         # System-managed fields (can't be edited by client)
         read_only_fields = ('media_id', 'uploaded_at', 'file_url')
+
+    def validate_file_type(self, value):
+        v = (value or '').lower().strip()
+        if v not in ('image', 'video'):
+            raise ValidationError("Invalid file_type. Must be 'image' or 'video'.")
+        return v
+
+    def create(self, validated_data):
+        """
+        Upload the file bytes to Supabase Storage, store the resulting URL in tbl_media.file_url,
+        and create the Media row.
+
+        Expected request (multipart/form-data):
+        - uploaded_file: file
+        - report: report_id (UUID)
+        - file_type: 'image' | 'video'
+        - sender_id: UUID (police office id)
+        """
+        uploaded_file = validated_data.pop('uploaded_file', None)
+        if uploaded_file is None:
+            raise ValidationError({"uploaded_file": "This field is required."})
+
+        # Validate file size (protect free hosting)
+        max_bytes = int(os.getenv('MEDIA_MAX_UPLOAD_BYTES', str(25 * 1024 * 1024)))  # 25MB default
+        if getattr(uploaded_file, 'size', 0) and uploaded_file.size > max_bytes:
+            raise ValidationError({"uploaded_file": f"File too large. Max size is {max_bytes} bytes."})
+
+        # Validate content-type matches file_type
+        file_type = (validated_data.get('file_type') or '').lower().strip()
+        content_type = (getattr(uploaded_file, 'content_type', '') or '').lower()
+        if file_type == 'image' and not content_type.startswith('image/'):
+            raise ValidationError({"uploaded_file": "File must be an image."})
+        if file_type == 'video' and not content_type.startswith('video/'):
+            raise ValidationError({"uploaded_file": "File must be a video."})
+
+        report_obj = validated_data.get('report')
+        if not report_obj:
+            raise ValidationError({"report": "Report is required."})
+
+        # Build storage path
+        # Use the same UUID for BOTH:
+        # - tbl_media.media_id (database row)
+        # - the filename in storage
+        # This makes it easy for admins to search/correlate in Supabase (DB ↔ Storage)
+        media_id = uuid.uuid4()
+        orig_name = getattr(uploaded_file, 'name', '') or 'upload'
+        _, ext = os.path.splitext(orig_name)
+        ext = (ext or '').lower()
+        safe_ext = ext if len(ext) <= 10 else ''
+        file_name = f"{media_id.hex}{safe_ext}"
+        storage_path = f"reports/{report_obj.report_id}/{file_type}/{file_name}"
+
+        bucket = os.getenv('SUPABASE_MEDIA_BUCKET', 'crash-media')
+
+        # Upload to Supabase Storage
+        try:
+            file_bytes = uploaded_file.read()
+            res = _supabase.storage.from_(bucket).upload(
+                storage_path,
+                file_bytes,
+                file_options={
+                    "content-type": content_type or "application/octet-stream",
+                    "upsert": False,
+                },
+            )
+            # Some supabase versions return dict with 'error'
+            if isinstance(res, dict) and res.get('error'):
+                raise Exception(res.get('error'))
+        except Exception as e:
+            raise ValidationError({"uploaded_file": f"Upload failed: {e}"})
+
+        # Get URL (public if bucket is public). If bucket is private, you can switch to signed URLs later.
+        try:
+            public_url = _supabase.storage.from_(bucket).get_public_url(storage_path)
+            if isinstance(public_url, dict):
+                public_url = public_url.get('publicUrl') or public_url.get('public_url')
+            if not public_url:
+                raise Exception("Unable to generate public URL.")
+        except Exception as e:
+            raise ValidationError({"uploaded_file": f"Upload succeeded but URL generation failed: {e}"})
+
+        validated_data['file_url'] = public_url
+        validated_data['media_id'] = media_id
+        return Media.objects.create(**validated_data)
 
 
 # ============================================================================

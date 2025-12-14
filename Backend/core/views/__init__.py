@@ -18,6 +18,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.parsers import FormParser, MultiPartParser
 
 from ..models import (
     Admin,
@@ -519,6 +520,51 @@ class MediaViewSet(viewsets.ModelViewSet):
 
     queryset = Media.objects.all().select_related('report')
     serializer_class = MediaSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def list(self, request, *args, **kwargs):
+        # Require JWT for listing media
+        is_valid, user_id, role, error_response = validate_jwt_token(request)
+        if not is_valid:
+            return error_response
+        request.user_id = user_id
+        request.user_role = role
+        return super().list(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        # Require JWT for uploading media
+        is_valid, user_id, role, error_response = validate_jwt_token(request)
+        if not is_valid:
+            return error_response
+        request.user_id = user_id
+        request.user_role = role
+
+        # Police may only upload evidence for reports assigned to their office.
+        if role == 'police' and user_id:
+            try:
+                office_uuid = uuid_module.UUID(user_id)
+            except (ValueError, TypeError):
+                return Response({"detail": "Invalid police office ID in token. Please log in again."}, status=status.HTTP_401_UNAUTHORIZED)
+
+            report_id = request.data.get('report')
+            if report_id:
+                try:
+                    report_obj = Report.objects.select_related('assigned_office').get(report_id=report_id)
+                    if not report_obj.assigned_office_id or report_obj.assigned_office_id != office_uuid:
+                        return Response({"detail": "You can only upload media for reports assigned to your office."}, status=status.HTTP_403_FORBIDDEN)
+                except Report.DoesNotExist:
+                    return Response({"detail": "Report not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return super().create(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        # Require JWT for deleting media
+        is_valid, user_id, role, error_response = validate_jwt_token(request)
+        if not is_valid:
+            return error_response
+        request.user_id = user_id
+        request.user_role = role
+        return super().destroy(request, *args, **kwargs)
 
     # Override: filter media by report_id if provided in query string
     # Usage: GET /media/?report_id=123 returns only files for that report
@@ -529,6 +575,16 @@ class MediaViewSet(viewsets.ModelViewSet):
         if report_id:
             # Filter to only files attached to this report
             queryset = queryset.filter(report_id=report_id)
+
+        # Scope media to the requesting police office (admin sees all)
+        role = getattr(self.request, 'user_role', None)
+        user_id = getattr(self.request, 'user_id', None)
+        if role == 'police' and user_id:
+            try:
+                office_uuid = uuid_module.UUID(user_id)
+                queryset = queryset.filter(report__assigned_office_id=office_uuid)
+            except (ValueError, TypeError):
+                pass
         return queryset
 
 
