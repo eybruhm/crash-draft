@@ -337,7 +337,7 @@ export default function GoogleMap({
           markerType === 'checkpoint'
             ? (isSelected ? largeCheckpointSize : normalCheckpointSize)
             : (isSelected ? largeOfficeSize : normalOfficeSize)
-
+        
         // Anchor point at bottom center (pins)
         const anchorX = iconSize / 2
         const anchorY = iconSize
@@ -360,7 +360,7 @@ export default function GoogleMap({
                   url: policeOfficeMarker,
                   scaledSize: new googleMaps.Size(iconSize, iconSize),
                   anchor: new googleMaps.Point(anchorX, anchorY),
-                },
+          },
           label: {
             text: '',
             color: '#ffffff',
@@ -424,7 +424,7 @@ export default function GoogleMap({
               url: policeOfficeMarker,
               scaledSize: new googleMaps.Size(iconSize, iconSize),
               anchor: new googleMaps.Point(anchorX, anchorY),
-            }
+      }
 
       // Update icon
       marker.setIcon(newIcon)

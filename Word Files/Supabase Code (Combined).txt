@@ -1,21 +1,14 @@
 
 
-________________________________________
-🧩 Code / Script
+-- ============================================================
+-- COMBINED SUPABASE DATABASE SCHEMA
+-- Combines: Your structure + Friend's haversine functions
+-- ============================================================
 
--- [CRASH DATABASE SCHEMA SCRIPT]
--- Complete, production-safe SQL for Supabase (PostgreSQL)
--- Includes cascading rules, UUID defaults, and update triggers.
-
--- -----------------------------------------------------
--- 0. EXTENSIONS
--- Enable UUID generator (required for DEFAULT gen_random_uuid())
--- -----------------------------------------------------
+-- 1. EXTENSIONS
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- -----------------------------------------------------
--- 1. ENUM TYPES
--- -----------------------------------------------------
+-- 2. ENUM TYPES
 CREATE TYPE report_status_enum AS ENUM (
   'Pending',
   'Acknowledged',
@@ -26,8 +19,8 @@ CREATE TYPE report_status_enum AS ENUM (
 );
 
 CREATE TYPE message_sender_type_enum AS ENUM (
-  'user',
-  'police'
+  'police',
+  'user'
 );
 
 CREATE TYPE media_file_type_enum AS ENUM (
@@ -35,11 +28,7 @@ CREATE TYPE media_file_type_enum AS ENUM (
   'video'
 );
 
--- -----------------------------------------------------
--- 2. TABLES (IN DEPENDENCY ORDER)
--- -----------------------------------------------------
-
--- [A] tbl_admin
+-- 3. TABLES
 CREATE TABLE tbl_admin (
   admin_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username VARCHAR(50) NOT NULL UNIQUE,
@@ -49,7 +38,6 @@ CREATE TABLE tbl_admin (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- [B] tbl_users
 CREATE TABLE tbl_users (
   user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(100) UNIQUE NOT NULL,
@@ -67,26 +55,24 @@ CREATE TABLE tbl_users (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- [C] tbl_police_offices
 CREATE TABLE tbl_police_offices (
-    office_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    office_name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,          
-    password_hash VARCHAR(255) NOT NULL,       
-    head_officer VARCHAR(100),
-    contact_number VARCHAR(20),
+  office_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  office_name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  head_officer VARCHAR(100),
+  contact_number VARCHAR(20),
   location_city VARCHAR(50),
   location_barangay VARCHAR(50),
-    latitude DECIMAL(10,7) NOT NULL,
-    longitude DECIMAL(10,7) NOT NULL,
-    created_by UUID,
-    created_at TIMESTAMP DEFAULT NOW(),
-    FOREIGN KEY (created_by)
+  latitude DECIMAL(10,7) NOT NULL,
+  longitude DECIMAL(10,7) NOT NULL,
+  created_by UUID,
+  created_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (created_by)
     REFERENCES tbl_admin(admin_id)
     ON DELETE SET NULL
 );
 
--- [D] tbl_reports
 CREATE TABLE tbl_reports (
   report_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   reporter_id UUID,
@@ -101,35 +87,31 @@ CREATE TABLE tbl_reports (
   created_at TIMESTAMP DEFAULT NOW(),
   remarks TEXT,
   updated_at TIMESTAMP,
-
   FOREIGN KEY (reporter_id)
     REFERENCES tbl_users(user_id)
     ON DELETE SET NULL,
-
   FOREIGN KEY (assigned_office_id)
     REFERENCES tbl_police_offices(office_id)
     ON DELETE SET NULL
 );
 
--- [E] tbl_checkpoints (UPDATED FOR CONTACT & TIME)
 CREATE TABLE tbl_checkpoints (
-    checkpoint_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    office_id UUID,
-    checkpoint_name VARCHAR(100) NOT NULL,
-    contact_number VARCHAR(20),                
-    time_start TIME,                          
-    time_end TIME,
-    location VARCHAR(50),   -- newly added just now, must update the models.py                              
-    latitude DECIMAL(10,7) NOT NULL,
-    longitude DECIMAL(10,7) NOT NULL,
-    assigned_officers TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    FOREIGN KEY (office_id)
+  checkpoint_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  office_id UUID,
+  checkpoint_name VARCHAR(100) NOT NULL,
+  contact_number VARCHAR(20),
+  time_start TIME,
+  time_end TIME,
+  latitude DECIMAL(10,7) NOT NULL,
+  longitude DECIMAL(10,7) NOT NULL,
+  assigned_officers TEXT,
+  location VARCHAR(100),
+  created_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (office_id)
     REFERENCES tbl_police_offices(office_id)
     ON DELETE CASCADE
 );
 
--- [F] tbl_summary_analytics
 CREATE TABLE tbl_summary_analytics (
   summary_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   location_city VARCHAR(50) NOT NULL,
@@ -139,7 +121,6 @@ CREATE TABLE tbl_summary_analytics (
   last_updated TIMESTAMP DEFAULT NOW()
 );
 
--- [G] tbl_messages
 CREATE TABLE tbl_messages (
   message_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   report_id UUID,
@@ -148,13 +129,11 @@ CREATE TABLE tbl_messages (
   receiver_id UUID NOT NULL,
   message_content TEXT NOT NULL,
   "timestamp" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
   FOREIGN KEY (report_id)
     REFERENCES tbl_reports(report_id)
     ON DELETE CASCADE
 );
 
--- [H] tbl_media
 CREATE TABLE tbl_media (
   media_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   file_url VARCHAR(255) NOT NULL,
@@ -162,15 +141,12 @@ CREATE TABLE tbl_media (
   file_type media_file_type_enum NOT NULL,
   sender_id UUID NOT NULL,
   uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
   FOREIGN KEY (report_id)
     REFERENCES tbl_reports(report_id)
     ON DELETE CASCADE
 );
 
--- -----------------------------------------------------
--- 3. TRIGGER: AUTO UPDATE `updated_at`
--- -----------------------------------------------------
+-- 4. TRIGGERS
 CREATE OR REPLACE FUNCTION trigger_set_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -184,12 +160,106 @@ BEFORE UPDATE ON tbl_reports
 FOR EACH ROW
 EXECUTE FUNCTION trigger_set_timestamp();
 
--- -----------------------------------------------------
--- 4. INDEXES (Recommended for Performance)
--- -----------------------------------------------------
+-- 5. INDEXES
 CREATE INDEX idx_reports_status ON tbl_reports(status);
 CREATE INDEX idx_reports_location ON tbl_reports(latitude, longitude);
 CREATE INDEX idx_reports_office ON tbl_reports(assigned_office_id);
 CREATE INDEX idx_media_report ON tbl_media(report_id);
 CREATE INDEX idx_messages_report ON tbl_messages(report_id);
+
+-- 6. FRIEND'S HAVERSINE FUNCTIONS
+DROP FUNCTION IF EXISTS get_nearby_police;
+CREATE OR REPLACE FUNCTION get_nearby_police(user_lat float, user_long float)
+RETURNS TABLE (
+  office_id uuid,
+  office_name varchar,
+  contact_number varchar,
+  latitude numeric,
+  longitude numeric,
+  dist_meters float
+)
+LANGUAGE sql
+AS $$
+  SELECT
+    office_id,
+    office_name,
+    contact_number,
+    latitude,
+    longitude,
+    (
+      6371000 * acos(
+        cos(radians(user_lat)) * cos(radians(latitude)) *
+        cos(radians(longitude) - radians(user_long)) +
+        sin(radians(user_lat)) * sin(radians(latitude))
+      )
+    ) AS dist_meters
+  FROM
+    tbl_police_offices
+  ORDER BY
+    dist_meters ASC
+  LIMIT 5;
+$$;
+
+DROP FUNCTION IF EXISTS create_emergency_sos;
+CREATE OR REPLACE FUNCTION create_emergency_sos(
+  p_user_id uuid,
+  p_lat float,
+  p_long float,
+  p_category text,
+  p_description text
+)
+RETURNS json
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_nearest_office_id uuid;
+  v_nearest_office_name text;
+  v_new_report_id uuid;
+BEGIN
+  SELECT office_id, office_name
+  INTO v_nearest_office_id, v_nearest_office_name
+  FROM tbl_police_offices
+  ORDER BY (
+      6371000 * acos(
+        cos(radians(p_lat)) * cos(radians(latitude)) *
+        cos(radians(longitude) - radians(p_long)) +
+        sin(radians(p_lat)) * sin(radians(latitude))
+      )
+  ) ASC
+  LIMIT 1;
+
+  IF v_nearest_office_id IS NULL THEN
+    RAISE EXCEPTION 'No police stations found in database.';
+  END IF;
+
+  INSERT INTO tbl_reports (
+    reporter_id,
+    assigned_office_id,
+    latitude,
+    longitude,
+    category,
+    description,
+    status,
+    created_at
+  )
+  VALUES (
+    p_user_id,
+    v_nearest_office_id,
+    p_lat,
+    p_long,
+    p_category,
+    p_description,
+    'Pending',
+    NOW()
+  )
+  RETURNING report_id INTO v_new_report_id;
+
+  RETURN json_build_object(
+    'report_id', v_new_report_id,
+    'assigned_office_id', v_nearest_office_id,
+    'assigned_office_name', v_nearest_office_name,
+    'message', 'SOS Sent! Connected to nearest station.'
+  );
+END;
+$$;
 

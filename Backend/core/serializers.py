@@ -65,10 +65,77 @@ except Exception as e:
 # Used when: Returning admin data in responses (excludes sensitive password)
 # Output: Admin ID, username, email, contact (safe to send to frontend)
 class AdminSerializer(serializers.ModelSerializer):
+    contact = serializers.CharField(source='contact_no', read_only=True)  # Map contact_no to contact for frontend
+    createdAt = serializers.DateTimeField(source='created_at', read_only=True)  # Map created_at to createdAt for frontend
+    
     class Meta:
         model = Admin
         # Only these fields are converted to JSON when returning admin data
-        fields = ('admin_id', 'username', 'email', 'contact_no')
+        fields = ('admin_id', 'username', 'email', 'contact_no', 'contact', 'created_at', 'createdAt')
+
+
+# ADMIN UPDATE SERIALIZER
+# Used when: Admin updates their profile (username, email, contact_no)
+# Input: username, email, contact_no (all optional, only send fields to update)
+class AdminUpdateSerializer(serializers.ModelSerializer):
+    contact = serializers.CharField(source='contact_no', required=False, allow_blank=True, allow_null=True)
+    
+    class Meta:
+        model = Admin
+        fields = ('username', 'email', 'contact', 'contact_no')
+        extra_kwargs = {
+            'username': {'required': False},
+            'email': {'required': False},
+            'contact_no': {'required': False, 'allow_blank': True, 'allow_null': True},
+        }
+    
+    def validate_email(self, value):
+        """Ensure email is unique (excluding current admin)"""
+        if value:
+            # Get current admin from context (set in view)
+            current_admin = self.context.get('current_admin')
+            if current_admin:
+                # Check if another admin already has this email
+                if Admin.objects.filter(email=value).exclude(admin_id=current_admin.admin_id).exists():
+                    raise serializers.ValidationError("An admin with this email already exists.")
+        return value
+    
+    def validate_username(self, value):
+        """Ensure username is unique (excluding current admin)"""
+        if value:
+            current_admin = self.context.get('current_admin')
+            if current_admin:
+                if Admin.objects.filter(username=value).exclude(admin_id=current_admin.admin_id).exists():
+                    raise serializers.ValidationError("An admin with this username already exists.")
+        return value
+    
+    def update(self, instance, validated_data):
+        # Handle contact field mapping
+        if 'contact_no' in validated_data:
+            instance.contact_no = validated_data['contact_no']
+        elif 'contact' in validated_data:
+            instance.contact_no = validated_data['contact']
+        
+        # Update other fields
+        if 'username' in validated_data:
+            instance.username = validated_data['username']
+        if 'email' in validated_data:
+            instance.email = validated_data['email']
+        
+        instance.save()
+        return instance
+
+
+# ADMIN PASSWORD UPDATE SERIALIZER
+# Used when: Admin changes their password
+# Input: new_password (plain text, will be hashed)
+class AdminPasswordUpdateSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, min_length=6)
+    
+    def validate_new_password(self, value):
+        if len(value) < 6:
+            raise serializers.ValidationError("Password must be at least 6 characters long.")
+        return value
         
 # ============================================================================
 # POLICE OFFICE SERIALIZERS
@@ -214,9 +281,45 @@ class AdminManualReportCreateSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     status = serializers.ChoiceField(choices=['Pending', 'Resolved'], required=False)
+    description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     created_at = serializers.DateTimeField(required=False, allow_null=True)
     updated_at = serializers.DateTimeField(required=False, allow_null=True)
     remarks = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    
+    def to_internal_value(self, data):
+        """
+        Override to ensure datetime fields are properly parsed as timezone-aware.
+        Frontend sends ISO strings (UTC), but we need to ensure they're parsed correctly.
+        Django's DateTimeField should handle ISO strings automatically, but we ensure UTC.
+        """
+        # Get the base parsed data
+        validated_data = super().to_internal_value(data)
+        
+        # Import timezone utilities
+        from django.utils import timezone
+        from datetime import timezone as dt_timezone
+        
+        # Handle created_at: ensure it's timezone-aware (UTC)
+        if 'created_at' in validated_data and validated_data['created_at']:
+            dt = validated_data['created_at']
+            if timezone.is_naive(dt):
+                # If naive, assume it's UTC (from ISO string) and make it aware
+                validated_data['created_at'] = timezone.make_aware(dt, dt_timezone.utc)
+            # If already aware, ensure it's in UTC
+            elif dt.tzinfo != dt_timezone.utc:
+                validated_data['created_at'] = dt.astimezone(dt_timezone.utc)
+        
+        # Handle updated_at: ensure it's timezone-aware (UTC)
+        if 'updated_at' in validated_data and validated_data['updated_at']:
+            dt = validated_data['updated_at']
+            if timezone.is_naive(dt):
+                # If naive, assume it's UTC (from ISO string) and make it aware
+                validated_data['updated_at'] = timezone.make_aware(dt, dt_timezone.utc)
+            # If already aware, ensure it's in UTC
+            elif dt.tzinfo != dt_timezone.utc:
+                validated_data['updated_at'] = dt.astimezone(dt_timezone.utc)
+        
+        return validated_data
 
     class Meta:
         model = Report

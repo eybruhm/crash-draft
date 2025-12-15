@@ -90,29 +90,31 @@ export const api = {
     return res.data
   },
 
-  // ------------------------------------------------------------------
-  // Not integrated yet (Day 1 cleanup: no more fake/mock responses)
-  // ------------------------------------------------------------------
-  listUsers() {
-    return Promise.reject(new Error('Not available yet: user listing endpoint not integrated.'))
+  /**
+   * Get current admin profile.
+   * Backend: GET /admin/profile/
+   */
+  async getAdminProfile() {
+    const res = await apiClient.get('/admin/profile/')
+    return res.data
   },
-  searchUser() {
-    return Promise.reject(new Error('Not available yet: user search endpoint not integrated.'))
+
+  /**
+   * Update admin profile (username, email, contact).
+   * Backend: PATCH /admin/profile/
+   */
+  async updateAdminProfile(payload) {
+    const res = await apiClient.patch('/admin/profile/', payload)
+    return res.data
   },
-  searchPoliceOffice() {
-    return Promise.reject(new Error('Not available yet: police office search endpoint not integrated.'))
-  },
-  createReport() {
-    return Promise.reject(new Error('Not available yet: manual report endpoint not integrated.'))
-  },
-  getAdminProfile() {
-    return Promise.reject(new Error('Not available yet: admin profile endpoint not integrated.'))
-  },
-  updateAdminProfile() {
-    return Promise.reject(new Error('Not available yet: admin profile endpoint not integrated.'))
-  },
-  changePassword() {
-    return Promise.reject(new Error('Not available yet: admin password change endpoint not integrated.'))
+
+  /**
+   * Change admin password.
+   * Backend: PATCH /admin/profile/password/
+   */
+  async changePassword(newPassword) {
+    const res = await apiClient.patch('/admin/profile/password/', { new_password: newPassword })
+    return res.data
   },
 }
 

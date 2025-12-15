@@ -32,6 +32,8 @@ from ..models import (
 )
 from ..serializers import (
     AdminSerializer,
+    AdminUpdateSerializer,
+    AdminPasswordUpdateSerializer,
     PoliceOfficeLoginSerializer,
     PoliceOfficeCreateSerializer,
     PoliceOfficeUpdateSerializer,
@@ -860,10 +862,27 @@ class AdminManualReportCreateAPIView(APIView):
             updated_at_value = timezone.now()
 
         # Allow overriding timestamps for offline 911 reports (post-save update)
+        # CRITICAL: Ensure all timestamps are timezone-aware (UTC) before saving
+        # The serializer should have already handled timezone conversion, but double-check here
+        from datetime import timezone as dt_timezone
         update_fields = {}
         if created_at_value:
+            # Ensure timezone-aware (should already be UTC from serializer)
+            if timezone.is_naive(created_at_value):
+                # If somehow still naive, assume UTC (from ISO string)
+                created_at_value = timezone.make_aware(created_at_value, dt_timezone.utc)
+            elif created_at_value.tzinfo != dt_timezone.utc:
+                # Convert to UTC if in different timezone
+                created_at_value = created_at_value.astimezone(dt_timezone.utc)
             update_fields['created_at'] = created_at_value
         if updated_at_value:
+            # Ensure timezone-aware (should already be UTC from serializer)
+            if timezone.is_naive(updated_at_value):
+                # If somehow still naive, assume UTC (from ISO string)
+                updated_at_value = timezone.make_aware(updated_at_value, dt_timezone.utc)
+            elif updated_at_value.tzinfo != dt_timezone.utc:
+                # Convert to UTC if in different timezone
+                updated_at_value = updated_at_value.astimezone(dt_timezone.utc)
             update_fields['updated_at'] = updated_at_value
         if update_fields:
             Report.objects.filter(report_id=report.report_id).update(**update_fields)
@@ -927,6 +946,147 @@ class AdminUserSearchAPIView(APIView):
             'created_at',
         )[:50])
         return Response(results, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# ADMIN PASSWORD HASH CONVERTER (Admin tool for Supabase insertion)
+# ============================================================================
+
+class AdminPasswordHashAPIView(APIView):
+    """
+    ENDPOINT: POST /admin/password-hash/
+    Purpose: Convert plain text password to Django hashed password for Supabase insertion.
+    Used by: Admin1 (junior IT) to generate hashed passwords that Admin2 (senior IT) can insert into Supabase.
+    Security: Requires admin authentication. Password is hashed using Django's make_password().
+    """
+    
+    def post(self, request):
+        is_valid, user_id, role, error_response = validate_jwt_token(request)
+        if not is_valid:
+            return error_response
+        if role != 'admin':
+            return Response({"detail": "Admin access required."}, status=status.HTTP_403_FORBIDDEN)
+        
+        password = request.data.get('password')
+        if not password:
+            return Response(
+                {"detail": "Password is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Hash the password using Django's make_password (same as used in serializers)
+        from django.contrib.auth.hashers import make_password
+        hashed_password = make_password(password)
+        
+        return Response({
+            "hashed_password": hashed_password
+        }, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# ADMIN PROFILE MANAGEMENT (Admin self-service profile updates)
+# ============================================================================
+
+class AdminProfileAPIView(APIView):
+    """
+    ENDPOINT: GET /admin/profile/
+             PATCH /admin/profile/
+    Purpose: Allow admin to view and update their own profile details.
+    Security: Requires admin authentication. Admin can only update their own profile.
+    """
+    
+    def get(self, request):
+        """Get current admin's profile information"""
+        is_valid, user_id, role, error_response = validate_jwt_token(request)
+        if not is_valid:
+            return error_response
+        if role != 'admin':
+            return Response({"detail": "Admin access required."}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            admin = Admin.objects.get(admin_id=user_id)
+            serializer = AdminSerializer(admin)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Admin.DoesNotExist:
+            return Response(
+                {"detail": "Admin account not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    def patch(self, request):
+        """Update current admin's profile (username, email, contact_no)"""
+        is_valid, user_id, role, error_response = validate_jwt_token(request)
+        if not is_valid:
+            return error_response
+        if role != 'admin':
+            return Response({"detail": "Admin access required."}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            admin = Admin.objects.get(admin_id=user_id)
+        except Admin.DoesNotExist:
+            return Response(
+                {"detail": "Admin account not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Map frontend 'contact' field to backend 'contact_no'
+        data = request.data.copy()
+        if 'contact' in data and 'contact_no' not in data:
+            data['contact_no'] = data.pop('contact')
+        
+        serializer = AdminUpdateSerializer(
+            admin,
+            data=data,
+            partial=True,  # Allow partial updates
+            context={'current_admin': admin}  # Pass current admin for uniqueness validation
+        )
+        
+        if serializer.is_valid():
+            serializer.save()
+            # Return updated admin data
+            updated_serializer = AdminSerializer(admin)
+            return Response(updated_serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminPasswordChangeAPIView(APIView):
+    """
+    ENDPOINT: PATCH /admin/profile/password/
+    Purpose: Allow admin to change their own password.
+    Security: Requires admin authentication. Password is hashed before storage.
+    """
+    
+    def patch(self, request):
+        """Change current admin's password"""
+        is_valid, user_id, role, error_response = validate_jwt_token(request)
+        if not is_valid:
+            return error_response
+        if role != 'admin':
+            return Response({"detail": "Admin access required."}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            admin = Admin.objects.get(admin_id=user_id)
+        except Admin.DoesNotExist:
+            return Response(
+                {"detail": "Admin account not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = AdminPasswordUpdateSerializer(data=request.data)
+        if serializer.is_valid():
+            new_password = serializer.validated_data['new_password']
+            # Hash the new password using Django's make_password
+            from django.contrib.auth.hashers import make_password
+            admin.password = make_password(new_password)
+            admin.save()
+            
+            return Response(
+                {"detail": "Password changed successfully."},
+                status=status.HTTP_200_OK
+            )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # ============================================================================

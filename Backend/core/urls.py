@@ -22,6 +22,9 @@ from .views import (
     AdminMapAPIView,
     AdminManualReportCreateAPIView,
     AdminUserSearchAPIView,
+    AdminPasswordHashAPIView,
+    AdminProfileAPIView,
+    AdminPasswordChangeAPIView,
     ReverseGeocodeAPIView,
     AnalyticsUpdateAPIView,
 )
@@ -120,6 +123,16 @@ urlpatterns = [
 
     # GET /admin/users/search/?q=... => AdminUserSearchAPIView (admin-only lookup tool)
     path('admin/users/search/', AdminUserSearchAPIView.as_view(), name='admin-user-search'),
+    
+    # POST /admin/password-hash/ => AdminPasswordHashAPIView (convert plain password to Django hash)
+    path('admin/password-hash/', AdminPasswordHashAPIView.as_view(), name='admin-password-hash'),
+    
+    # GET /admin/profile/ => AdminProfileAPIView (get current admin profile)
+    # PATCH /admin/profile/ => AdminProfileAPIView (update current admin profile)
+    path('admin/profile/', AdminProfileAPIView.as_view(), name='admin-profile'),
+    
+    # PATCH /admin/profile/password/ => AdminPasswordChangeAPIView (change admin password)
+    path('admin/profile/password/', AdminPasswordChangeAPIView.as_view(), name='admin-password-change'),
     
     # POST /admin/analytics/update/ => AnalyticsUpdateAPIView (recalculate statistics cache)
     path('admin/analytics/update/', AnalyticsUpdateAPIView.as_view(), name='analytics-update'),

@@ -12,7 +12,7 @@ import {
   Navigation,
   User,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import NavigationTabs from '../components/NavigationTabs'
@@ -21,6 +21,7 @@ import ReportChatModal from '../components/ReportChatModal'
 import ReportDetailsModal from '../components/ReportDetailsModal'
 import { useAuth } from '../contexts/AuthContext'
 import { getActiveReports, getReportDetail, updateReportStatus } from '../services/reportsService'
+import { POLLING_INTERVALS } from '../constants'
 
 /**
  * Helper function: Transform backend report format to frontend format
@@ -81,35 +82,50 @@ const Dashboard = () => {
     setTimeout(() => setToast(null), 1000)
   }
 
-  // Fetch real reports from backend on mount
+  // Track if this is the initial load (to show loading state only on first load)
+  const isInitialLoadRef = useRef(true)
+
+  // Fetch reports from backend
+  const fetchReports = useCallback(async () => {
+    try {
+      // Only show loading state on initial load to prevent UI blinking during polling
+      if (isInitialLoadRef.current) {
+        setLoading(true)
+      }
+      setError(null)
+      
+      // Call backend API to get active reports (excludes resolved/canceled)
+      const backendReports = await getActiveReports()
+      
+      // Transform backend format to frontend format
+      const frontendReports = backendReports.map(mapBackendReportToFrontend)
+      
+      setReports(frontendReports)
+      isInitialLoadRef.current = false
+    } catch (err) {
+      console.error('Failed to fetch reports:', err)
+      setError(err.message || 'Unable to load reports. Please try again.')
+      isInitialLoadRef.current = false
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Fetch reports on mount and set up polling
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login', { replace: true })
       return
     }
 
-    const fetchReports = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        
-        // Call backend API to get active reports (excludes resolved/canceled)
-        const backendReports = await getActiveReports()
-        
-        // Transform backend format to frontend format
-        const frontendReports = backendReports.map(mapBackendReportToFrontend)
-        
-        setReports(frontendReports)
-      } catch (err) {
-        console.error('Failed to fetch reports:', err)
-        setError(err.message || 'Unable to load reports. Please try again.')
-      } finally {
-        setLoading(false)
-      }
-    }
-
+    // Initial fetch
     fetchReports()
-  }, [isAuthenticated, navigate])
+
+    // Polling interval - same as GlobalReportNotifier to keep dashboard and notifications in sync
+    const pollInterval = setInterval(fetchReports, POLLING_INTERVALS.GLOBAL_NOTIFIER_AND_DASHBOARD)
+
+    return () => clearInterval(pollInterval)
+  }, [isAuthenticated, navigate, fetchReports])
 
   /**
    * Handle "View" button click - fetch full report details

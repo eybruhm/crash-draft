@@ -330,26 +330,26 @@ export default function Dashboard() {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
               <div className="backdrop-blur-xl bg-slate-900/95 border border-white/20 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                 <div className="p-6 border-b border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-600/40 to-blue-500/30 rounded-xl flex items-center justify-center border border-blue-400/30 shadow-lg">
-                      <MapPin className="text-blue-300" size={24} />
-                    </div>
-                    <div>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-600/40 to-blue-500/30 rounded-xl flex items-center justify-center border border-blue-400/30 shadow-lg">
+                    <MapPin className="text-blue-300" size={24} />
+                  </div>
+                  <div>
                       <h3 className="text-xl font-bold text-white tracking-tight">
                         {selectedPin.checkpoint_id ? 'Checkpoint Details' : 'Police Office Details'}
                       </h3>
                       <p className="text-xs text-slate-400 mt-0.5 font-medium">Complete information</p>
-                    </div>
                   </div>
-                  <button
+                </div>
+                <button
                     type="button"
-                    onClick={() => setSelectedPin(null)}
+                  onClick={() => setSelectedPin(null)}
                     className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
                     aria-label="Close"
-                  >
-                    ×
-                  </button>
-                </div>
+                >
+                  ×
+                </button>
+              </div>
 
                 <div className="p-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -381,36 +381,36 @@ export default function Dashboard() {
                     ) : (
                       <>
                         <div className="info-card">
-                          <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Office Name</p>
+                  <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Office Name</p>
                           <p className="font-bold text-white text-lg">{selectedPin.office_name}</p>
-                        </div>
+                </div>
                         <div className="info-card">
                           <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Location</p>
                           <p className="font-bold text-white text-lg">
                             {[selectedPin.location_barangay, selectedPin.location_city].filter(Boolean).join(', ') || 'N/A'}
                           </p>
-                        </div>
+                </div>
                         <div className="info-card">
                           <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Created By</p>
                           <p className="font-bold text-white text-lg">{selectedPin.created_by_username || 'N/A'}</p>
-                        </div>
+                </div>
                         <div className="info-card">
-                          <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Head Officer</p>
+                  <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Head Officer</p>
                           <p className="font-bold text-white text-lg">{selectedPin.head_officer || 'N/A'}</p>
                         </div>
                         <div className="info-card">
                           <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Contact</p>
                           <p className="font-bold text-white text-lg">{selectedPin.contact_number || 'N/A'}</p>
-                        </div>
+                </div>
                         <div className="info-card">
-                          <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">UUID</p>
+                  <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">UUID</p>
                           <p className="font-mono text-sm text-slate-200 break-all font-semibold">{selectedPin.office_id}</p>
-                        </div>
+                </div>
                         <div className="info-card">
                           <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Coordinates</p>
-                          <p className="font-mono text-sm text-slate-200 font-semibold">
+                  <p className="font-mono text-sm text-slate-200 font-semibold">
                             {Number(selectedPin.latitude).toFixed(4)}, {Number(selectedPin.longitude).toFixed(4)}
-                          </p>
+                  </p>
                         </div>
                       </>
                     )}

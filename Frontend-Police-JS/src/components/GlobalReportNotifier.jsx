@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { getMapData, mapReportToMarker } from '../services/mapService'
 import { initUserInteractionForSound, playNewReportSound } from '../utils/notifications'
+import { POLLING_INTERVALS } from '../constants'
 
 /**
  * GlobalReportNotifier
@@ -61,7 +62,8 @@ export default function GlobalReportNotifier() {
 
     // initial + interval
     poll()
-    interval = setInterval(poll, 15000)
+    // Polling interval - same as Dashboard to keep notifications and dashboard in sync
+    interval = setInterval(poll, POLLING_INTERVALS.GLOBAL_NOTIFIER_AND_DASHBOARD)
 
     return () => {
       cancelled = true

@@ -20,6 +20,7 @@ export default function ManualReport() {
     status: 'Pending',
     latitude: '',
     longitude: '',
+    description: '',
     remarks: '',
     created_at: '', // datetime-local
     updated_at: '', // datetime-local
@@ -29,12 +30,12 @@ export default function ManualReport() {
 
   const [msg, setMsg] = useState({ type: '', text: '' })
   const [saving, setSaving] = useState(false)
-
+  
   // User search
   const [userQuery, setUserQuery] = useState('')
   const [searchingUsers, setSearchingUsers] = useState(false)
   const [userResults, setUserResults] = useState([])
-
+  
   // Police search
   const [officeQuery, setOfficeQuery] = useState('')
 
@@ -162,6 +163,7 @@ export default function ManualReport() {
       const payload = {
         category: form.category,
         status: form.status,
+        description: form.description || null,
         remarks: form.remarks || null,
         latitude: norm7(form.latitude),
         longitude: norm7(form.longitude),
@@ -183,6 +185,7 @@ export default function ManualReport() {
         status: 'Pending',
         latitude: '',
         longitude: '',
+        description: '',
         remarks: '',
         reporter: '',
         assigned_office: '',
@@ -251,40 +254,40 @@ export default function ManualReport() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Category *</label>
-                <select
-                  value={form.category}
-                  onChange={(e) => update('category', e.target.value)}
+                <label className="block text-sm font-medium text-white mb-2">Category</label>
+                  <select
+                    value={form.category}
+                    onChange={(e) => update('category', e.target.value)}
                   className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white outline-none transition-all"
-                >
-                  <option value="" className="bg-slate-900">Select</option>
-                  <option value="Emergency" className="bg-slate-900">Emergency</option>
-                  <option value="Accident" className="bg-slate-900">Accident</option>
-                  <option value="Theft" className="bg-slate-900">Theft</option>
-                  <option value="Assault" className="bg-slate-900">Assault</option>
-                  <option value="Traffic Violation" className="bg-slate-900">Traffic Violation</option>
-                  <option value="Vandalism" className="bg-slate-900">Vandalism</option>
-                  <option value="Other" className="bg-slate-900">Other</option>
-                </select>
-              </div>
-              <div>
+                  >
+                    <option value="" className="bg-slate-900">Select</option>
+                    <option value="Emergency" className="bg-slate-900">Emergency</option>
+                    <option value="Accident" className="bg-slate-900">Accident</option>
+                    <option value="Theft" className="bg-slate-900">Theft</option>
+                    <option value="Assault" className="bg-slate-900">Assault</option>
+                    <option value="Traffic Violation" className="bg-slate-900">Traffic Violation</option>
+                    <option value="Vandalism" className="bg-slate-900">Vandalism</option>
+                    <option value="Other" className="bg-slate-900">Other</option>
+                  </select>
+                </div>
+                <div>
                 <label className="block text-sm font-medium text-white mb-2">Status (from 911)</label>
-                <select
-                  value={form.status}
-                  onChange={(e) => update('status', e.target.value)}
+                  <select
+                    value={form.status}
+                    onChange={(e) => update('status', e.target.value)}
                   className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white outline-none transition-all"
-                >
-                  <option value="Pending" className="bg-slate-900">Pending</option>
-                  <option value="Resolved" className="bg-slate-900">Resolved</option>
-                </select>
+                  >
+                    <option value="Pending" className="bg-slate-900">Pending</option>
+                    <option value="Resolved" className="bg-slate-900">Resolved</option>
+                  </select>
+                </div>
               </div>
-            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Latitude *</label>
-                <input
-                  type="number"
+                <label className="block text-sm font-medium text-white mb-2">Latitude</label>
+                  <input
+                    type="number"
                   step="0.0000001"
                   value={form.latitude}
                   onChange={(e) => update('latitude', e.target.value)}
@@ -292,40 +295,40 @@ export default function ManualReport() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Longitude *</label>
-                <input
-                  type="number"
+                <label className="block text-sm font-medium text-white mb-2">Longitude</label>
+                  <input
+                    type="number"
                   step="0.0000001"
                   value={form.longitude}
                   onChange={(e) => update('longitude', e.target.value)}
                   className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
-                />
+                  />
+                </div>
               </div>
-            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Created At (optional)</label>
-                <input
+                <div>
+                <label className="block text-sm font-medium text-white mb-2">Created At</label>
+                  <input
                   type="datetime-local"
                   value={form.created_at}
                   onChange={(e) => update('created_at', e.target.value)}
                   className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white outline-none transition-all"
-                />
-              </div>
-              <div>
+                  />
+                </div>
+                <div>
                 <label className="block text-sm font-medium text-white mb-2">Updated At (optional)</label>
-                <input
+                  <input
                   type="datetime-local"
                   value={form.updated_at}
                   onChange={(e) => update('updated_at', e.target.value)}
                   className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white outline-none transition-all"
-                />
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Assigned Police Office UUID *</label>
+              <div>
+              <label className="block text-sm font-medium text-white mb-2">Assigned Police Office UUID</label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -350,13 +353,13 @@ export default function ManualReport() {
                   </button>
                 </p>
               )}
-            </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Reporter UUID (optional)</label>
+                <div>
+              <label className="block text-sm font-medium text-white mb-2">Reporter UUID</label>
               <div className="flex gap-2">
-                <input
-                  type="text"
+                  <input
+                    type="text"
                   value={form.reporter}
                   onChange={(e) => update('reporter', e.target.value)}
                   className="flex-1 px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all font-mono text-sm"
@@ -378,30 +381,42 @@ export default function ManualReport() {
                   </button>
                 </p>
               )}
-            </div>
+                </div>
 
-            <div>
+                <div>
+              <label className="block text-sm font-medium text-white mb-2">Description</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => update('description', e.target.value)}
+                rows={3}
+                className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all resize-none"
+                placeholder="Describe the incident or report details..."
+                  />
+              </div>
+
+                <div>
               <label className="block text-sm font-medium text-white mb-2">Remarks (optional)</label>
               <textarea
                 value={form.remarks}
                 onChange={(e) => update('remarks', e.target.value)}
                 rows={3}
                 className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all resize-none"
-              />
-            </div>
-
-            {msg.text && (
-              <div className={`flex items-center gap-3 p-4 rounded-xl backdrop-blur-md border ${
-                msg.type === 'success' ? 'bg-green-600/30 border-green-500/60' : 'bg-red-600/30 border-red-500/60'
-              }`}>
-                {msg.type === 'success' ? (
-                  <CheckCircle className="text-green-300" size={20} />
-                ) : (
-                  <AlertCircle className="text-red-300" size={20} />
-                )}
-                <p className={`text-sm ${msg.type === 'success' ? 'text-green-200' : 'text-red-200'}`}>{msg.text}</p>
+                placeholder="Additional notes or remarks..."
+                  />
               </div>
-            )}
+
+              {msg.text && (
+                <div className={`flex items-center gap-3 p-4 rounded-xl backdrop-blur-md border ${
+                msg.type === 'success' ? 'bg-green-600/30 border-green-500/60' : 'bg-red-600/30 border-red-500/60'
+                }`}>
+                  {msg.type === 'success' ? (
+                    <CheckCircle className="text-green-300" size={20} />
+                  ) : (
+                    <AlertCircle className="text-red-300" size={20} />
+                  )}
+                <p className={`text-sm ${msg.type === 'success' ? 'text-green-200' : 'text-red-200'}`}>{msg.text}</p>
+                </div>
+              )}
 
             <div className="flex gap-3 pt-2">
               <button
@@ -423,59 +438,59 @@ export default function ManualReport() {
                 Clear Selected UUIDs
               </button>
             </div>
-          </form>
+            </form>
         </div>
       )}
 
       {/* User tab */}
       {activeTab === 'user' && (
-        <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-lg p-6">
+          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-lg p-6">
           <h3 className="text-xl font-bold text-white mb-4">Search User (Get UUID)</h3>
-          <div className="flex gap-2">
-            <input
-              type="text"
+              <div className="flex gap-2">
+                <input
+                  type="text"
               value={userQuery}
               onChange={(e) => setUserQuery(e.target.value)}
               placeholder="Search by email, phone, first name, last name…"
-              className="flex-1 px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none"
-            />
+                className="flex-1 px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none"
+                />
             <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-slate-300 text-sm flex items-center gap-2">
               <Search size={16} />
               {searchingUsers ? 'Searching…' : 'Live'}
             </div>
-          </div>
+            </div>
 
           <div className="mt-4 overflow-x-auto">
             {userResults.length === 0 ? (
               <p className="text-slate-400 text-sm">No results yet. Search to find the user UUID.</p>
             ) : (
-              <table className="w-full">
-                <thead className="bg-white/10 border-b border-white/20">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-white font-semibold">UUID</th>
-                    <th className="px-4 py-3 text-left text-white font-semibold">Name</th>
-                    <th className="px-4 py-3 text-left text-white font-semibold">Email</th>
+                <table className="w-full">
+                  <thead className="bg-white/10 border-b border-white/20">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-white font-semibold">UUID</th>
+                      <th className="px-4 py-3 text-left text-white font-semibold">Name</th>
+                      <th className="px-4 py-3 text-left text-white font-semibold">Email</th>
                     <th className="px-4 py-3 text-left text-white font-semibold">Phone</th>
                     <th className="px-4 py-3 text-right text-white font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/10">
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
                   {userResults.map((u) => (
                     <tr key={u.user_id} className="hover:bg-white/5 transition-colors">
                       <td className="px-4 py-3 text-slate-300 font-mono text-sm">{u.user_id}</td>
                       <td className="px-4 py-3 text-slate-300 text-sm">{u.first_name} {u.last_name}</td>
                       <td className="px-4 py-3 text-slate-300 text-sm">{u.email}</td>
                       <td className="px-4 py-3 text-slate-300 text-sm">{u.phone || 'N/A'}</td>
-                      <td className="px-4 py-3">
+                          <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
+                              <button
+                                type="button"
                             onClick={() => copy(u.user_id)}
                             className="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium flex items-center gap-1"
-                          >
-                            <Copy size={14} />
-                            Copy UUID
-                          </button>
+                              >
+                                <Copy size={14} />
+                                Copy UUID
+                </button>
                           <button
                             type="button"
                             onClick={() => selectUser(u)}
@@ -484,64 +499,64 @@ export default function ManualReport() {
                             <Check size={14} />
                             Use as Reporter
                           </button>
-                        </div>
-                      </td>
-                    </tr>
+                            </div>
+                          </td>
+                        </tr>
                   ))}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
             )}
           </div>
-        </div>
+          </div>
       )}
 
       {/* Police tab */}
       {activeTab === 'police' && (
-        <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-lg p-6">
+          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-lg p-6">
           <h3 className="text-xl font-bold text-white mb-4">Search Police Office (Get UUID)</h3>
-          <input
-            type="text"
+                <input
+                  type="text"
             value={officeQuery}
             onChange={(e) => setOfficeQuery(e.target.value)}
             placeholder="Search by office name / city / barangay…"
             className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none"
-          />
+                />
 
           <div className="mt-4 overflow-x-auto">
             {loadingOffices ? (
               <p className="text-slate-400 text-sm">Loading offices…</p>
             ) : (
-              <table className="w-full">
-                <thead className="bg-white/10 border-b border-white/20">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-white font-semibold">UUID</th>
+                <table className="w-full">
+                  <thead className="bg-white/10 border-b border-white/20">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-white font-semibold">UUID</th>
                     <th className="px-4 py-3 text-left text-white font-semibold">Office</th>
                     <th className="px-4 py-3 text-left text-white font-semibold">Location</th>
-                    <th className="px-4 py-3 text-left text-white font-semibold">Head Officer</th>
-                    <th className="px-4 py-3 text-left text-white font-semibold">Contact</th>
+                      <th className="px-4 py-3 text-left text-white font-semibold">Head Officer</th>
+                      <th className="px-4 py-3 text-left text-white font-semibold">Contact</th>
                     <th className="px-4 py-3 text-right text-white font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/10">
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
                   {filteredOffices.slice(0, 50).map((o) => (
                     <tr key={o.office_id} className="hover:bg-white/5 transition-colors">
                       <td className="px-4 py-3 text-slate-300 font-mono text-sm">{o.office_id}</td>
                       <td className="px-4 py-3 text-slate-300 text-sm">{o.office_name}</td>
                       <td className="px-4 py-3 text-slate-300 text-sm">
                         {[o.location_barangay, o.location_city].filter(Boolean).join(', ') || 'N/A'}
-                      </td>
+                          </td>
                       <td className="px-4 py-3 text-slate-300 text-sm">{o.head_officer || 'N/A'}</td>
                       <td className="px-4 py-3 text-slate-300 text-sm">{o.contact_number || 'N/A'}</td>
-                      <td className="px-4 py-3">
+                          <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
+                              <button
+                                type="button"
                             onClick={() => copy(o.office_id)}
                             className="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium flex items-center gap-1"
-                          >
-                            <Copy size={14} />
-                            Copy UUID
-                          </button>
+                              >
+                                <Copy size={14} />
+                                Copy UUID
+                </button>
                           <button
                             type="button"
                             onClick={() => selectOffice(o)}
@@ -550,13 +565,13 @@ export default function ManualReport() {
                             <Check size={14} />
                             Use as Assigned Office
                           </button>
-                        </div>
-                      </td>
-                    </tr>
+                            </div>
+                          </td>
+                        </tr>
                   ))}
-                </tbody>
-              </table>
-            )}
+                  </tbody>
+                </table>
+              )}
           </div>
         </div>
       )}

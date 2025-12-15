@@ -31,10 +31,16 @@ const PageHeader = ({ onLogout }) => {
             </div>
           </div>
 
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-lg font-bold text-white">{user?.office_name || 'Police Office'}</p>
+            </div>
+          </div>
+
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-white">{user?.office_name || `${user?.first_name} ${user?.last_name}`}</p>
+                <p className="text-sm font-semibold text-white">{user?.head_officer || 'Head Officer'}</p>
                 <p className="text-xs text-white/70">{user?.email}</p>
               </div>
               <button

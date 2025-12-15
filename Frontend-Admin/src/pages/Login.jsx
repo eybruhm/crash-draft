@@ -112,16 +112,16 @@ export default function Login() {
             className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <LogIn size={18} />
-            {loading ? 'Logging in...' : 'Sign In'}
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
         {/* Footer */}
-        <div className="border-t border-white/10 pt-6">
+        {/* <div className="border-t border-white/10 pt-6">
           <p className="text-xs text-slate-500 text-center mb-4 font-medium">
             No signup available. Admin accounts are created via system administrator.
           </p>
-        </div>
+        </div> */}
       </div>
     </div>
   )

@@ -85,20 +85,21 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-white/95 backdrop-blur-xl rounded-full flex items-center justify-center shadow-2xl ring-2 ring-white/60 hover:scale-105 transition-transform">
-              {/* Logo: swap this import if you want a different version */}
-              <img src={logoV1} alt="CRASH" className="h-full w-full object-cover rounded-full" />
-          </div>
-          <h2 className="mt-6 text-3xl font-bold text-white drop-shadow-lg">CRASH Dashboard</h2>
-          <p className="mt-2 text-sm text-white/90 font-medium drop-shadow">Police Authority Login</p>
-        </div>
+        
 
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="bg-white/25 backdrop-blur-2xl rounded-2xl shadow-2xl p-8 space-y-5 border border-white/40">
+            <div className="text-center">
+              <div className="mx-auto h-16 w-16 bg-white/95 backdrop-blur-xl rounded-full flex items-center justify-center shadow-2xl ring-2 ring-white/60 hover:scale-105 transition-transform">
+                  {/* Logo: swap this import if you want a different version */}
+                  <img src={logoV1} alt="CRASH" className="h-full w-full object-cover rounded-full" />
+              </div>
+              <h2 className="mt-6 text-3xl font-bold text-white drop-shadow-lg">Police Office</h2>
+              <p className="mt-2 text-sm text-white/90 font-medium drop-shadow">Crime Response & Alert System Hub</p>
+            </div>
             <div>
               <label htmlFor="email" className="block text-sm font-semibold text-white/95 mb-2 drop-shadow">
-                Email Address
+                Email
               </label>
               <div className="relative">
                 <input
@@ -133,7 +134,7 @@ const Login = () => {
                   type={showPassword ? 'text' : 'password'}
                   required
                   className="w-full px-4 py-3 border border-white/40 rounded-lg bg-white/30 backdrop-blur-lg text-gray-900 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-400/70 focus:border-white/60 focus:bg-white/40 transition-all duration-200 shadow-md font-medium"
-                  placeholder="Enter your password"
+                  placeholder="********"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, Mail, Phone, Calendar, Lock, CheckCircle, AlertCircle, Edit, Save, X, LogOut } from 'lucide-react'
-import { clearAuth, getStoredUser } from '../utils/auth'
+import { clearAuth, getStoredUser, storeUser } from '../utils/auth'
 import { validatePassword, validateEmail } from '../utils/validation'
 import { getErrorMessage } from '../utils/errors'
 import { ROUTES } from '../constants'
 import PasswordInput from '../components/PasswordInput'
+import { api } from '../services/api'
 
 /**
  * Profile & Settings Page Component
@@ -28,15 +29,39 @@ export default function Profile() {
   const [editingDetails, setEditingDetails] = useState(false)
   const [editForm, setEditForm] = useState({ username: '', email: '', contact: '' })
 
-  // Day 1 cleanup: Profile editing depends on backend endpoints not yet built.
-  // Keep page view-only for now to avoid mock/fake behavior.
+  // Fetch latest profile data on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await api.getAdminProfile()
+        setProfile(data)
+        // CRITICAL: Preserve role field when updating stored user data
+        // The backend AdminSerializer doesn't return role, but RequireAuth needs it
+        const currentUser = getStoredUser()
+        storeUser({ ...data, role: currentUser?.role || 'admin' })
+        setEditForm({
+          username: data.username || '',
+          email: data.email || '',
+          contact: data.contact || data.contact_no || '',
+        })
+      } catch (err) {
+        console.error('Failed to fetch profile:', err)
+        // Keep using stored profile if fetch fails
+        // Don't clear auth on profile fetch errors - let interceptor handle 401s
+      }
+    }
+    
+    if (stored) {
+      fetchProfile()
+    }
+  }, [])
 
   useEffect(() => {
     if (profile) {
       setEditForm({
         username: profile.username || '',
         email: profile.email || '',
-        contact: profile.contact || '',
+        contact: profile.contact || profile.contact_no || '',
       })
     }
   }, [profile])
@@ -46,11 +71,62 @@ export default function Profile() {
   }
 
   async function handleSaveDetails() {
-    setMsg({ type: 'error', text: 'Not available yet: admin profile update is not integrated.' })
+    setMsg({ type: '', text: '' })
+    
+    // Validate email if provided
+    if (editForm.email && !validateEmail(editForm.email)) {
+      setMsg({ type: 'error', text: 'Invalid email format.' })
+      return
+    }
+    
+    // Validate username if provided
+    if (editForm.username && editForm.username.trim().length < 3) {
+      setMsg({ type: 'error', text: 'Username must be at least 3 characters.' })
+      return
+    }
+    
+    setSaving(true)
+    try {
+      const payload = {
+        username: editForm.username.trim(),
+        email: editForm.email.trim(),
+        contact: editForm.contact.trim() || null,
+      }
+      
+      const updated = await api.updateAdminProfile(payload)
+      setProfile(updated)
+      // CRITICAL: Preserve role field when updating stored user data
+      // The backend AdminSerializer doesn't return role, but RequireAuth needs it
+      const currentUser = getStoredUser()
+      storeUser({ ...updated, role: currentUser?.role || 'admin' })
+      setMsg({ type: 'success', text: 'Profile updated successfully!' })
+      setEditingDetails(false)
+    } catch (err) {
+      setMsg({ type: 'error', text: getErrorMessage(err) })
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleChangePassword() {
-    setMsg({ type: 'error', text: 'Not available yet: password change is not integrated.' })
+    setMsg({ type: '', text: '' })
+    
+    if (!validatePassword(newPassword)) {
+      setMsg({ type: 'error', text: 'Password must be at least 6 characters.' })
+      return
+    }
+    
+    setSaving(true)
+    try {
+      await api.changePassword(newPassword)
+      setMsg({ type: 'success', text: 'Password changed successfully!' })
+      setNewPassword('')
+      setChangingPassword(false)
+    } catch (err) {
+      setMsg({ type: 'error', text: getErrorMessage(err) })
+    } finally {
+      setSaving(false)
+    }
   }
 
   function handleLogout() {
@@ -69,11 +145,7 @@ export default function Profile() {
         {/* Main Profile Card */}
         <div className="lg:col-span-2">
           <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-lg p-8">
-            <div className="mb-6 p-4 rounded-xl bg-amber-600/20 border border-amber-500/40">
-              <p className="text-amber-200 text-sm">
-                Profile editing + password change will be enabled after we add admin-only backend endpoints.
-              </p>
-            </div>
+           
             {/* Header */}
             <div className="flex items-center gap-4 mb-8 pb-8 border-b border-white/20">
               <div className="w-20 h-20 bg-blue-600/40 backdrop-blur-md border border-blue-500/60 rounded-lg flex items-center justify-center">
@@ -152,7 +224,11 @@ export default function Profile() {
                     <Calendar className="text-slate-500 mt-1" size={20} />
                     <div>
                       <p className="text-sm text-slate-400">Account Created</p>
-                      <p className="text-lg font-semibold text-white">{new Date(profile.createdAt).toLocaleString()}</p>
+                      <p className="text-lg font-semibold text-white">
+                        {profile.createdAt || profile.created_at 
+                          ? new Date(profile.createdAt || profile.created_at).toLocaleString()
+                          : 'N/A'}
+                      </p>
                     </div>
                   </div>
                 </>
@@ -283,37 +359,6 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Sidebar Info */}
-        <div className="space-y-4">
-          <div className="backdrop-blur-xl bg-blue-600/30 border border-blue-500/40 rounded-2xl p-6">
-            <h3 className="font-semibold text-white mb-3">Account Information</h3>
-            <ul className="text-sm text-slate-300 space-y-2">
-              <li className="flex items-start gap-2">
-                <span className="text-blue-300 mt-1">✓</span>
-                <span>Admin-level access to all functions</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-blue-300 mt-1">✓</span>
-                <span>Can create and remove police accounts</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-blue-300 mt-1">✓</span>
-                <span>Access to real-time map visualization</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-blue-300 mt-1">✓</span>
-                <span>Full system administration rights</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="backdrop-blur-xl bg-amber-600/30 border border-amber-500/40 rounded-2xl p-6">
-            <h3 className="font-semibold text-white mb-3">Security Tip</h3>
-            <p className="text-sm text-slate-300">
-              Keep your password strong and unique. Never share your admin credentials with anyone.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   )

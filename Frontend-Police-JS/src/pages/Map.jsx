@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { getMapData, mapReportToMarker, mapCheckpointToMarker, reverseGeocode } from '../services/mapService'
 import { createCheckpoint, updateCheckpoint, deleteCheckpoint, toBackendFormat } from '../services/checkpointsService'
 import { updateReportStatus } from '../services/reportsService'
+import { POLLING_INTERVALS } from '../constants'
 
 /**
  * 🔑 Google Maps API Key setup (do not hardcode keys in source):
@@ -226,8 +227,8 @@ const MapPage = () => {
     // Initial fetch
     fetchMapData()
 
-    // Set up polling every 30 seconds
-    const pollInterval = setInterval(fetchMapData, 15000)
+    // Polling interval - refreshes map data (reports, offices, checkpoints)
+    const pollInterval = setInterval(fetchMapData, POLLING_INTERVALS.LIVE_MAP)
 
     return () => clearInterval(pollInterval)
   }, [isAuthenticated, navigate, fetchMapData])
@@ -539,9 +540,6 @@ const MapPage = () => {
                   ) : (
                     <>
                       <p className="text-gray-900 text-sm font-semibold">{contextMenu.full_address || 'N/A'}</p>
-                      <p className="text-gray-600 text-xs">
-                        {contextMenu.address_line || ''}{contextMenu.address_line ? ' • ' : ''}{contextMenu.barangay || 'N/A'} • {contextMenu.city || 'N/A'}
-                      </p>
                     </>
                   )}
                 </div>

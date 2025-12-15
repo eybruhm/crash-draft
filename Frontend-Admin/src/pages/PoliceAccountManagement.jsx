@@ -224,13 +224,13 @@ export default function PoliceAccountManagement() {
             </button>
           </div>
 
-          <button
-            onClick={openAddModal}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600/60 text-white rounded-xl hover:bg-blue-600/80 transition-all backdrop-blur-md border border-blue-500/60 font-medium"
-          >
-            <UserPlus size={18} />
-            Add Police Account
-          </button>
+        <button
+          onClick={openAddModal}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600/60 text-white rounded-xl hover:bg-blue-600/80 transition-all backdrop-blur-md border border-blue-500/60 font-medium"
+        >
+          <UserPlus size={18} />
+          Add Police Account
+        </button>
         </div>
       </div>
 

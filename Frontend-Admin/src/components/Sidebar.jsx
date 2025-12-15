@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { LogOut, Settings, LayoutDashboard, Users, FileText, X, Menu } from 'lucide-react'
+import { LogOut, Settings, LayoutDashboard, Users, FileText, Hash, X, Menu } from 'lucide-react'
 import { useState } from 'react'
 import { ROUTES } from '../constants'
 import { getStoredUser, clearAuth } from '../utils/auth'
@@ -33,6 +33,7 @@ export default function Sidebar() {
     { to: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
     { to: ROUTES.POLICE_ACCOUNTS, label: 'Police Accounts', icon: Users },
     { to: ROUTES.MANUAL_REPORT, label: 'Manual Report', icon: FileText },
+    { to: ROUTES.PASSWORD_HASH_CONVERTER, label: 'Password Hash', icon: Hash },
   ]
 
   const isActive = (path) => location.pathname === path

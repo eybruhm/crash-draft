@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import PoliceAccountManagement from './pages/PoliceAccountManagement'
 import Profile from './pages/Profile'
 import ManualReport from './pages/ManualReport'
+import PasswordHashConverter from './pages/PasswordHashConverter'
 import { ROUTES } from './constants'
 import { SidebarProvider, useSidebar } from './contexts/SidebarContext'
 
@@ -88,6 +89,15 @@ function AppContent() {
               element={
                 <RequireAuth>
                   <ManualReport />
+                </RequireAuth>
+              }
+            />
+            
+            <Route
+              path={ROUTES.PASSWORD_HASH_CONVERTER}
+              element={
+                <RequireAuth>
+                  <PasswordHashConverter />
                 </RequireAuth>
               }
             />

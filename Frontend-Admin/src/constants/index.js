@@ -8,6 +8,7 @@ export const ROUTES = {
   POLICE_ACCOUNTS: '/police-accounts',
   PROFILE: '/profile',
   MANUAL_REPORT: '/manual-report',
+  PASSWORD_HASH_CONVERTER: '/password-hash-converter',
 }
 
 export const STORAGE_KEYS = {

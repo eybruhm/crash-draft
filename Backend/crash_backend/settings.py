@@ -100,17 +100,27 @@ WSGI_APPLICATION = 'crash_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'postgres',
+#         'USER': 'postgres.uhutjmujczeuqeoqosuw',
+#         'PASSWORD': 'softwareengineering101',
+#         'HOST': 'aws-1-ap-northeast-2.pooler.supabase.com',
+#         'PORT': '5432',
+#     }
+# }
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'postgres',
-        'USER': 'postgres.uhutjmujczeuqeoqosuw',
-        'PASSWORD': 'softwareengineering101',
-        'HOST': 'aws-1-ap-northeast-2.pooler.supabase.com',
+        'USER': 'postgres.hlkjnvovfhxwhjseeokx',
+        'PASSWORD': 'Emanvelasco123',
+        'HOST': 'aws-1-ap-southeast-1.pooler.supabase.com',
         'PORT': '5432',
     }
 }
-
 
 
 # Under DATABASES, ensure the password is still hardcoded for now, but use this for the API Key:
@@ -126,6 +136,10 @@ REST_FRAMEWORK = {
     # Disable default authentication - we validate JWT tokens manually in views
     # This prevents the auto-lookup of Django User model which conflicts with our
     # PoliceOffice model (UUID vs integer primary key mismatch)
+    
+    # Datetime format: Return times in Manila timezone as ISO strings
+    # This allows frontend to display times directly without conversion
+    'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S%z',  # ISO format with timezone
     'DEFAULT_AUTHENTICATION_CLASSES': [],
     # Most endpoints don't require auth by default (public access for citizens)
     # Individual views/viewsets can override with permission_classes

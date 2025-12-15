@@ -1,0 +1,197 @@
+
+-- This is my supabase code made by me (web)
+🧩 Code / Script
+
+-- [CRASH DATABASE SCHEMA SCRIPT]
+-- Complete, production-safe SQL for Supabase (PostgreSQL)
+-- Includes cascading rules, UUID defaults, and update triggers.
+
+-- -----------------------------------------------------
+-- 0. EXTENSIONS
+-- Enable UUID generator (required for DEFAULT gen_random_uuid())
+-- -----------------------------------------------------
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- -----------------------------------------------------
+-- 1. ENUM TYPES
+-- -----------------------------------------------------
+CREATE TYPE report_status_enum AS ENUM (
+  'Pending',
+  'Acknowledged',
+  'En Route',
+  'Resolved',
+  'On Scene',
+  'Canceled'
+);
+
+-- User and Police are the only chatting
+CREATE TYPE message_sender_type_enum AS ENUM (
+  'police',
+  'user'
+);  
+
+
+CREATE TYPE media_file_type_enum AS ENUM (
+  'image',
+  'video'
+);
+
+-- -----------------------------------------------------
+-- 2. TABLES (IN DEPENDENCY ORDER)
+-- -----------------------------------------------------
+
+-- [A] tbl_admin
+CREATE TABLE tbl_admin (
+  admin_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username VARCHAR(50) NOT NULL UNIQUE,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  contact_no VARCHAR(15),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- [B] tbl_users
+CREATE TABLE tbl_users (
+  user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(100) UNIQUE NOT NULL,
+  phone VARCHAR(20) UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  birthdate DATE NOT NULL,
+  sex VARCHAR(10),
+  emergency_contact_name VARCHAR(100),
+  emergency_contact_number VARCHAR(20),
+  region VARCHAR(50),
+  city VARCHAR(50),
+  barangay VARCHAR(50),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- [C] tbl_police_offices
+CREATE TABLE tbl_police_offices (
+    office_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    office_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,          
+    password_hash VARCHAR(255) NOT NULL,       
+    head_officer VARCHAR(100),
+    contact_number VARCHAR(20),
+  location_city VARCHAR(50),
+  location_barangay VARCHAR(50),
+    latitude DECIMAL(10,7) NOT NULL,
+    longitude DECIMAL(10,7) NOT NULL,
+    created_by UUID,
+    created_at TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (created_by)
+    REFERENCES tbl_admin(admin_id)
+    ON DELETE SET NULL
+);
+
+
+-- [D] tbl_reports
+CREATE TABLE tbl_reports (
+  report_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reporter_id UUID,
+  assigned_office_id UUID,
+  category VARCHAR(30) NOT NULL,
+  description TEXT,
+  status report_status_enum DEFAULT 'Pending',
+  location_city VARCHAR(50),
+  location_barangay VARCHAR(50),
+  latitude DECIMAL(10,7) NOT NULL,
+  longitude DECIMAL(10,7) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  remarks TEXT,
+  updated_at TIMESTAMP,
+
+  FOREIGN KEY (reporter_id)
+    REFERENCES tbl_users(user_id)
+    ON DELETE SET NULL,
+
+  FOREIGN KEY (assigned_office_id)
+    REFERENCES tbl_police_offices(office_id)
+    ON DELETE SET NULL
+);
+
+-- [E] tbl_checkpoints (UPDATED FOR CONTACT & TIME)
+CREATE TABLE tbl_checkpoints (
+    checkpoint_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    office_id UUID,
+    checkpoint_name VARCHAR(100) NOT NULL,
+    contact_number VARCHAR(20),                
+    time_start TIME,                          '
+    time_end TIME,                             '
+    latitude DECIMAL(10,7) NOT NULL,
+    longitude DECIMAL(10,7) NOT NULL,
+    assigned_officers TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (office_id)
+    REFERENCES tbl_police_offices(office_id)
+    ON DELETE CASCADE
+);
+
+
+-- [F] tbl_summary_analytics
+CREATE TABLE tbl_summary_analytics (
+  summary_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  location_city VARCHAR(50) NOT NULL,
+  location_barangay VARCHAR(50) NOT NULL,
+  category VARCHAR(30) NOT NULL,
+  report_count INT DEFAULT 0,
+  last_updated TIMESTAMP DEFAULT NOW()
+);
+
+-- [G] tbl_messages
+CREATE TABLE tbl_messages (
+  message_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_id UUID,
+  sender_id UUID,
+  sender_type message_sender_type_enum NOT NULL,
+  receiver_id UUID NOT NULL,
+  message_content TEXT NOT NULL,
+  "timestamp" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (report_id)
+    REFERENCES tbl_reports(report_id)
+    ON DELETE CASCADE
+);
+
+-- [H] tbl_media
+CREATE TABLE tbl_media (
+  media_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  file_url VARCHAR(255) NOT NULL,
+  report_id UUID,
+  file_type media_file_type_enum NOT NULL,
+  sender_id UUID NOT NULL,
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (report_id)
+    REFERENCES tbl_reports(report_id)
+    ON DELETE CASCADE
+);
+
+-- -----------------------------------------------------
+-- 3. TRIGGER: AUTO UPDATE `updated_at`
+-- -----------------------------------------------------
+CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_timestamp
+BEFORE UPDATE ON tbl_reports
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp();
+
+-- -----------------------------------------------------
+-- 4. INDEXES (Recommended for Performance)
+-- -----------------------------------------------------
+CREATE INDEX idx_reports_status ON tbl_reports(status);
+CREATE INDEX idx_reports_location ON tbl_reports(latitude, longitude);
+CREATE INDEX idx_reports_office ON tbl_reports(assigned_office_id);
+CREATE INDEX idx_media_report ON tbl_media(report_id);
+CREATE INDEX idx_messages_report ON tbl_messages(report_id);
+
