@@ -14,6 +14,7 @@
 5. **[API_ENDPOINTS.md](API_ENDPOINTS.md)** - All endpoint specifications (5 min read)
 6. **[BACKEND_SETUP.md](BACKEND_SETUP.md)** - Step-by-step integration guide (10 min read)
 7. **[INTEGRATION_CHECKLIST.md](INTEGRATION_CHECKLIST.md)** - Pre-deployment checklist (2 min read)
+8. **[ENV_VARS.md](ENV_VARS.md)** - Required environment variables (2 min read)
 
 ### For Architecture Understanding
 8. **[ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md)** - Visual data flows and diagrams (10 min read)
@@ -47,6 +48,7 @@
 | [API_ENDPOINTS.md](API_ENDPOINTS.md) | 8 endpoint specifications | Backend Dev | 5 min |
 | [BACKEND_SETUP.md](BACKEND_SETUP.md) | Integration guide | Backend Dev | 10 min |
 | [INTEGRATION_CHECKLIST.md](INTEGRATION_CHECKLIST.md) | Pre-deployment checklist | DevOps | 2 min |
+| [ENV_VARS.md](ENV_VARS.md) | Environment variables | Everyone | 2 min |
 
 ### Status & Reports
 | File | Purpose | Audience | Time |

@@ -16,6 +16,8 @@ import GoogleMap from '../components/GoogleMap'
 export default function Dashboard() {
   const [police, setPolice] = useState([])
   const [selectedPin, setSelectedPin] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     const loadPolice = () => {
@@ -31,20 +33,22 @@ export default function Dashboard() {
       // To switch, uncomment the getMapData() function in api.js and use:
       // api.getMapData().then(data => setPolice(data.offices || []))
       // ====================================================================
+      setLoadError('')
       api.listPolice()
-        .then((data) => {
-          // Handle Django pagination if present: data.results || data
-          const offices = data.results || data
+        .then((offices) => {
           setPolice(Array.isArray(offices) ? offices : [])
         })
         .catch((err) => {
           console.error('[Dashboard] Error loading police:', err)
+          setLoadError('Failed to load police offices. Make sure you are logged in as an admin and the backend is running.')
+          setPolice([])
         })
+        .finally(() => setLoading(false))
     }
     
     loadPolice()
-    // Refresh every 5 seconds to catch new additions (reduced frequency to avoid map glitches)
-    const interval = setInterval(loadPolice, 5000)
+    // Refresh every 30 seconds (avoid spamming backend)
+    const interval = setInterval(loadPolice, 30000)
     
     return () => clearInterval(interval)
   }, [])
@@ -74,6 +78,22 @@ export default function Dashboard() {
               defaultCenter={{ lat: 14.5995, lng: 120.9842 }} // Manila, Philippines
               defaultZoom={10}
             />
+            {loading && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                <div className="text-center glass-elevated p-8 max-w-md">
+                  <p className="text-white text-lg font-semibold mb-2">Loading map data…</p>
+                  <p className="text-slate-400 text-sm">Fetching police offices from the backend</p>
+                </div>
+              </div>
+            )}
+            {loadError && !loading && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                <div className="text-center glass-elevated p-8 max-w-md">
+                  <p className="text-white text-lg font-semibold mb-2">Unable to load data</p>
+                  <p className="text-slate-400 text-sm">{loadError}</p>
+                </div>
+              </div>
+            )}
             {police.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                 <div className="text-center glass-elevated p-8 max-w-md">
@@ -108,28 +128,24 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="info-card group hover:scale-[1.02] transition-transform duration-200">
                   <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Office Name</p>
-                  <p className="font-bold text-white text-lg">{selectedPin.officeName}</p>
-                </div>
-                <div className="info-card group hover:scale-[1.02] transition-transform duration-200">
-                  <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">City</p>
-                  <p className="font-bold text-white text-lg">{selectedPin.city || 'N/A'}</p>
-                </div>
-                <div className="info-card group hover:scale-[1.02] transition-transform duration-200">
-                  <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Barangay</p>
-                  <p className="font-bold text-white text-lg">{selectedPin.barangay || 'N/A'}</p>
+                  <p className="font-bold text-white text-lg">{selectedPin.office_name}</p>
                 </div>
                 <div className="info-card group hover:scale-[1.02] transition-transform duration-200">
                   <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Head Officer</p>
-                  <p className="font-bold text-white text-lg">{selectedPin.headName || 'N/A'}</p>
+                  <p className="font-bold text-white text-lg">{selectedPin.head_officer || 'N/A'}</p>
+                </div>
+                <div className="info-card group hover:scale-[1.02] transition-transform duration-200">
+                  <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Contact</p>
+                  <p className="font-bold text-white text-lg">{selectedPin.contact_number || 'N/A'}</p>
                 </div>
                 <div className="info-card group hover:scale-[1.02] transition-transform duration-200">
                   <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">UUID</p>
-                  <p className="font-mono text-sm text-slate-200 break-all font-semibold">{selectedPin.id}</p>
+                  <p className="font-mono text-sm text-slate-200 break-all font-semibold">{selectedPin.office_id}</p>
                 </div>
                 <div className="info-card group hover:scale-[1.02] transition-transform duration-200">
                   <p className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">Location</p>
                   <p className="font-mono text-sm text-slate-200 font-semibold">
-                    {selectedPin.location?.lat?.toFixed(4)}, {selectedPin.location?.lng?.toFixed(4)}
+                    {Number(selectedPin.latitude).toFixed(4)}, {Number(selectedPin.longitude).toFixed(4)}
                   </p>
                 </div>
               </div>

@@ -39,11 +39,21 @@ Goals:
      - Day 6: Media Uploads & Final Cleanup (✅)
      - Day 6.5: Mobile/Citizen Backend Readiness (THIS IS CANCELLED AND OPTIONAL NOW)
 
-⏳ 7. Planning Stage (Create Integration Roadmap For Admin) 
-     - [To be made]
-	
+✅ 7. Planning Stage (Create Integration Roadmap For Admin) 
+     - Day 0 goal: npm install + npm run dev works; env vars prepared.
+     - Day 2 goal: Admin login works with JWT; protected routes enforced.
+     - Day 3 goal: Admin can CRUD police offices with real backend data.
+     - Day 7 goal: No mock data left; core flows tested; docs updated.
+
 ⏳ 8. Execute Created Roadmap from Planning Stage Day-by-Day For Admin
-     - [To be made]
+     - DAY 0: Setup & “Make Admin Web Run” (no backend changes) ✅
+     - DAY 1: Cleanup + Prepare Admin Web for Real Backend (still minimal backend risk) (WE ARE HERE)
+     - DAY 2: Authentication Integration (Admin Login ↔ Backend JWT)
+     - DAY 3: Police Office Management (Admin1 core feature)
+     - DAY 4: Manual Report Page (Admin “Create Report” / Data tools)
+     - DAY 5: Admin Dashboard (Real Metrics)
+     - DAY 6: Admin2 Tool — “Password → Django Hash” (Optional but matches your request)
+     - DAY 7: Testing + Cleanup + Documentation (Admin Integration)
 
 ⏳ 9. Overall Testing
      - End-to-end user flows
@@ -68,27 +78,6 @@ Goals:
      - API documentation
      - User manual (optional)
 
-
-
-
-
-General Workflow (hierarchical)
-Step 1: Deep Understanding (✅)
-	Day 1: Backend models/endpoints, frontend structure, DB/Supabase review
-Step 2: Align Frontend Stack (✅)
-	Day 1: Create Vite app, Tailwind setup, router skeleton, smoke tests
-Step 3: Document Backend API (✅)
-	Day 1: API_ENDPOINTS_REFERENCE.md, auth/Supabase sanity checks
-Step 4: Port Next.js Frontend to Vite (⏳ not sure if were done already)
-	Day 1: Port globals (fonts/Tailwind base), layout shell, routing parity check (✅)
-	Day 2: AuthContext + login page (UI parity, stubbed calls) (✅)
-	Day 3: Dashboard + Active Reports UI (mock data first) (✅)
-	Day 4: Map + Checkpoints UI (mock data, Google Maps wiring) (✅)
-	Day 5: Chat + Messages UI (mock data) (✅)
-	Day 6: Analytics UI (✅)
-	Day 7: Resolved Cases + PDFs UI hooks (mock data), cross-page smoke tests (✅)
-Step 5: Integration Planning (✅)
-Step 6+: Full Integration Execution (we are here)
 
 
 
@@ -127,7 +116,7 @@ Day 7: Resolved Cases + PDFs (✅)
 
 
 
-Roadmap for Step 5: Integration Planning (⏳)
+Roadmap for Step 5: Integration Police (✅)
 🗓️ DAY-BY-DAY EXECUTION PLAN 
 DAY 1: Foundation Setup & Real Authentication (✅)
 Goal: Set up communication infrastructure and implement proper auth flow

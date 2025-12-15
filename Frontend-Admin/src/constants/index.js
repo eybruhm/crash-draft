@@ -20,4 +20,4 @@ export const STORAGE_KEYS = {
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
 
 // Google Maps API key used across the app
-export const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || 'AIzaSyDH2oAs9HoUj5BueJRfrAfeZiSkhmMWCok'
+export const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY

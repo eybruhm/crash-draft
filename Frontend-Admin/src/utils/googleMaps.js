@@ -21,7 +21,7 @@ export function loadGoogleMapsApi(apiKey, options = {}) {
   }
 
   if (!apiKey) {
-    console.warn('Google Maps API key is missing. Set VITE_GOOGLE_API_KEY.')
+    console.warn('Google Maps API key is missing. Set VITE_GOOGLE_MAPS_API_KEY.')
     googleMapsPromise = Promise.resolve(null)
     return googleMapsPromise
   }

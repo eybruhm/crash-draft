@@ -1,0 +1,180 @@
+Step 7 — Integration Roadmap (Admin Web ↔ Django Backend)
+Format matches your Integration Roadmap.txt: Day → Goal → Steps → Sub-steps → Description.
+________________________________________
+DAY 0: Setup & “Make Admin Web Run” (no backend changes)
+Goal: Frontend-Admin runs locally with no dependency errors.
+Step 1: Confirm correct Node/NPM + folder
+Sub-steps:
+1.	Open PowerShell in the correct folder:
+•	cd C:\ALMM\Programming\CRASH\Frontend-Admin
+2.	Verify versions:
+•	node -v
+•	npm -v
+Description: Many install issues happen because commands run in the wrong folder (root vs Frontend-Admin).
+Step 2: Fix the React/Lucide dependency conflict (React 18)
+Sub-steps:
+1.	Ensure Admin uses React 18 (lucide-react peer dependency):
+•	react and react-dom should be 18.x
+2.	Clean install:
+•	delete node_modules/ and package-lock.json
+•	run npm install
+Description: Your error happened because lockfile was pulling React 19, but lucide-react requires React 18.
+Step 3: Run Admin dev server
+Sub-steps:
+1.	npm run dev
+2.	Open the printed URL (usually http://localhost:5173/ or similar)
+Description: Confirms Vite is installed and working.
+Step 4: Create env template (Admin)
+Sub-steps:
+1.	Create Frontend-Admin/.env.example with:
+•	VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1
+•	VITE_GOOGLE_MAPS_API_KEY=YOUR_KEY
+2.	Create your real .env locally (don’t commit it).
+Description: Admin must match Police conventions so deployment is easy later.
+________________________________________
+DAY 1: Cleanup + Prepare Admin Web for Real Backend (still minimal backend risk)
+Goal: Remove “mock mode” behaviors and make Admin ready for real API injection.
+Step 1: Remove placeholders & demo UI text
+Sub-steps:
+1.	Login page: remove “Demo Credentials” block and any hardcoded demo values.
+2.	Remove “fake success” logic (ex: always “login success” even if not real).
+3.	Replace any placeholder counts/cards with “Loading / No data”.
+Description: Prevents confusion during testing (Admin should reflect real backend state only).
+Step 2: Replace mock/localStorage API layer with real API layer (Axios)
+Sub-steps:
+1.	Replace Frontend-Admin/src/services/api.js mock logic with:
+•	apiClient (Axios instance)
+•	attach JWT header
+•	handle 401 → logout/redirect
+2.	Match Police behavior (same token storage strategy).
+Description: Right now Admin is “mock-mode”. This is the biggest blocker to integration.
+Step 3: Normalize data naming conventions (Admin adapts to Backend)
+Sub-steps:
+1.	List all fields Admin currently uses (example: officeName) and map to backend (office_name).
+2.	Decide the rule: Admin frontend must follow backend field names.
+3.	Update components to use backend naming.
+Description: This avoids “mapping spaghetti” and keeps backend stable for Police.
+Step 4: Add a real Auth context + protected routes
+Sub-steps:
+1.	Implement AdminAuthContext (or reuse pattern from Police).
+2.	Store tokens + user info.
+3.	RequireAuth should check role: allow only admin (Admin1/Admin2 logic later).
+Description: Admin must not accidentally use Police permissions/assumptions.
+________________________________________
+DAY 2: Authentication Integration (Admin Login ↔ Backend JWT)
+Goal: Admin logs in using backend POST /api/v1/auth/login/ and stays logged in.
+Step 1: Wire Admin login request
+Sub-steps:
+1.	Update Admin Login.jsx to send:
+•	email + password (backend supports email reliably)
+2.	Save access + refresh tokens.
+3.	Save user details returned by backend.
+Description: Admin login currently accepts “Email or Username” UI, but backend is email-first. Keep UI label if you want, but send email until/unless backend adds username login safely.
+Step 2: Implement logout + token expiry handling
+Sub-steps:
+1.	Clear local storage tokens on logout.
+2.	On 401 responses:
+•	try refresh (optional)
+•	otherwise force logout.
+Description: Prevents “stuck logged in but API fails” behavior.
+________________________________________
+DAY 3: Police Office Management (Admin1 core feature)
+Goal: Admin can manage police offices using backend admin endpoints.
+Step 1: Integrate /api/v1/admin/police-offices/ CRUD
+Sub-steps:
+1.	Replace mock data in PoliceAccountManagement.jsx:
+•	GET list offices
+•	POST create office
+•	PATCH update office
+•	DELETE remove office
+2.	Add loading/error states.
+Description: Backend already has this capability; we just wire it cleanly.
+Step 2: Validate permissions + scoping
+Sub-steps:
+1.	Ensure backend requires role admin for these endpoints.
+2.	Confirm Admin web blocks access when role isn’t allowed.
+Description: Keeps Police backend behavior untouched, and prevents security leaks.
+________________________________________
+DAY 4: Manual Report Page (Admin “Create Report” / Data tools)
+Goal: Decide what Admin is allowed to do with reports, then implement safely.
+Step 1: Decide policy (important)
+Sub-steps:
+1.	Confirm what Admin1 can do:
+•	create reports manually?
+•	edit assigned office?
+•	delete reports?
+2.	Confirm Admin2 powers (database-level) vs Admin1 powers (web-level).
+Description: This step prevents us from building an endpoint that breaks real police workflows.
+Step 2: Implement backend endpoints only if needed
+Sub-steps (options):
+•	Option A (recommended): Admin can only view reports + manage offices.
+•	Option B: Admin can create manual reports via a dedicated admin endpoint:
+•	POST /api/v1/admin/reports/manual/ (separate from mobile + police endpoints)
+Description: Separate endpoints reduce the chance of impacting Police logic.
+________________________________________
+DAY 5: Admin Dashboard (Real Metrics)
+Goal: Replace Admin dashboard mock widgets with real backend data.
+Step 1: Decide dashboard KPIs
+Sub-steps:
+1.	Choose simple metrics first (counts):
+•	total offices
+•	total active reports
+•	total resolved reports
+2.	Only after that: charts/filters.
+Description: Keep it simple so integration stays smooth.
+Step 2: Add backend “admin dashboard summary” endpoint (if missing)
+Sub-steps:
+1.	Create one endpoint to return all counts in one response.
+2.	Lock it to admin role only.
+Description: Avoids many separate API calls and reduces bugs.
+________________________________________
+DAY 6: Admin2 Tool — “Password → Django Hash” (Optional but matches your request)
+Goal: Admin2 can generate a Django-compatible hashed password for inserting Admin1 via Supabase SQL.
+Step 1: Decide safest approach
+Sub-steps (recommended):
+1.	Add a backend endpoint:
+•	POST /api/v1/admin/tools/hash-password/
+•	returns make_password(plaintext) result
+2.	Secure it:
+•	admin-only
+•	ideally Admin2-only (if you track admin levels)
+3.	Admin web page:
+•	input password
+•	click “Generate Hash”
+•	copy output
+Description: Doing Django hashes correctly in pure frontend JS is risky; backend can produce the exact format Django expects.
+________________________________________
+DAY 7: Testing + Cleanup + Documentation (Admin Integration)
+Goal: Confirm all Admin flows work and document them.
+Step 1: End-to-end tests
+Sub-steps:
+1.	Login → open Police management → create/edit/delete office
+2.	Refresh page → session persists
+3.	Blocked access without token
+4.	Error handling when backend is off
+Step 2: Remove leftovers
+Sub-steps:
+1.	Remove mockData.json usage (if still referenced)
+2.	Remove leftover placeholder buttons
+3.	Ensure env vars documented
+________________________________________
+Weaknesses / Notes (important, based on your Admin repo)
+•	Mock-mode API: Admin currently behaves like it’s integrated, but it’s localStorage/mock. This must be replaced early (Day 1–2).
+•	Field name mismatches: Admin uses frontend-friendly names; backend uses DB/serializer names. Best fix: frontend adapts to backend.
+•	Login label mismatch: UI says “Email or Username”, backend is reliable with email. We either update UI, or later extend backend carefully.
+•	Risk control: Any new “Admin report endpoints” should be separate (/admin/...) so Police endpoints remain stable.
+
+________________________________________
+[See "Documentation After Day.txt" for a sample]
+Documentation Every after day we finish:
+Day - Title/Goal
+What was Done (each step and sub-step)
+Files created and modified (this just my addition)
+How to test (to find bugs and we will solve it. we dont move to next day until we are clear)
+Current state
+Important Notes
+Next Steps/Day Preview (connecting to what we did)
+Summary
+[Just send it here in Chat Convo so even you can backread it!]
+
+

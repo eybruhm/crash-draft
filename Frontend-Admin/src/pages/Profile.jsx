@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, Mail, Phone, Calendar, Lock, CheckCircle, AlertCircle, Edit, Save, X, LogOut } from 'lucide-react'
-import { api } from '../services/api'
-import { getStoredUser, storeUser, clearAuth } from '../utils/auth'
+import { clearAuth, getStoredUser } from '../utils/auth'
 import { validatePassword, validateEmail } from '../utils/validation'
 import { getErrorMessage } from '../utils/errors'
 import { ROUTES } from '../constants'
@@ -28,11 +27,8 @@ export default function Profile() {
   const [editingDetails, setEditingDetails] = useState(false)
   const [editForm, setEditForm] = useState({ username: '', email: '', contact: '' })
 
-  useEffect(() => {
-    if (stored?.email) {
-      api.getAdminProfile(stored.email).then(setProfile).catch(() => {})
-    }
-  }, [])
+  // Day 1 cleanup: Profile editing depends on backend endpoints not yet built.
+  // Keep page view-only for now to avoid mock/fake behavior.
 
   useEffect(() => {
     if (profile) {
@@ -49,48 +45,11 @@ export default function Profile() {
   }
 
   async function handleSaveDetails() {
-    if (!validateEmail(editForm.email)) {
-      setMsg({ type: 'error', text: 'Invalid email format' })
-      return
-    }
-
-    setSaving(true)
-    setMsg({ type: '', text: '' })
-    try {
-      const updated = await api.updateAdminProfile(profile.email, editForm)
-      setProfile(updated)
-      storeUser(updated)
-      setEditingDetails(false)
-      setMsg({ type: 'success', text: 'Profile updated successfully!' })
-    } catch (err) {
-      setMsg({ type: 'error', text: getErrorMessage(err) })
-    } finally {
-      setSaving(false)
-    }
+    setMsg({ type: 'error', text: 'Not available yet: admin profile update is not integrated.' })
   }
 
   async function handleChangePassword() {
-    if (!newPassword) {
-      setMsg({ type: 'error', text: 'Please enter a new password' })
-      return
-    }
-    if (!validatePassword(newPassword)) {
-      setMsg({ type: 'error', text: 'Password must be at least 6 characters' })
-      return
-    }
-
-    setSaving(true)
-    setMsg({ type: '', text: '' })
-    try {
-      await api.changePassword(profile.email, newPassword)
-      setMsg({ type: 'success', text: 'Password changed successfully!' })
-      setNewPassword('')
-      setChangingPassword(false)
-    } catch (err) {
-      setMsg({ type: 'error', text: getErrorMessage(err) })
-    } finally {
-      setSaving(false)
-    }
+    setMsg({ type: 'error', text: 'Not available yet: password change is not integrated.' })
   }
 
   function handleLogout() {
@@ -109,6 +68,11 @@ export default function Profile() {
         {/* Main Profile Card */}
         <div className="lg:col-span-2">
           <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-lg p-8">
+            <div className="mb-6 p-4 rounded-xl bg-amber-600/20 border border-amber-500/40">
+              <p className="text-amber-200 text-sm">
+                Profile editing + password change will be enabled after we add admin-only backend endpoints.
+              </p>
+            </div>
             {/* Header */}
             <div className="flex items-center gap-4 mb-8 pb-8 border-b border-white/20">
               <div className="w-20 h-20 bg-blue-600/40 backdrop-blur-md border border-blue-500/60 rounded-lg flex items-center justify-center">

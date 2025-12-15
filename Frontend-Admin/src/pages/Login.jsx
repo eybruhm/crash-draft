@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { LogIn, AlertCircle } from 'lucide-react'
 import { api } from '../services/api'
 import { ROUTES } from '../constants'
-import { storeUser } from '../utils/auth'
+import { storeToken, storeUser } from '../utils/auth'
 import { getErrorMessage } from '../utils/errors'
 
 /**
@@ -15,7 +15,7 @@ import { getErrorMessage } from '../utils/errors'
  * @returns {JSX.Element} Login form with authentication UI
  */
 export default function Login() {
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -27,8 +27,17 @@ export default function Login() {
     setLoading(true)
     setError('')
     try {
-      const admin = await api.loginAdmin({ usernameOrEmail: username, password })
-      storeUser(admin)
+      const data = await api.loginAdmin({ email, password })
+      if (data?.role !== 'admin') {
+        throw new Error('This account is not an admin.')
+      }
+
+      // Store token + user (include role for RequireAuth gating)
+      if (data?.access) {
+        storeToken(data.access)
+      }
+      storeUser({ ...(data?.user || {}), role: data?.role })
+
       const from = (location.state && location.state.from) || { pathname: ROUTES.DASHBOARD }
       navigate(from.pathname || ROUTES.DASHBOARD)
     } catch (err) {
@@ -48,21 +57,21 @@ export default function Login() {
               <span className="text-white font-bold text-3xl">C</span>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">CRASH Admin</h1>
-          <p className="mt-2 text-sm text-slate-400 font-medium">Law Enforcement Management System</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Admin</h1>
+          <p className="mt-2 text-sm text-slate-400 font-medium">Crime Response & Alert System Hub</p>
         </div>
 
         {/* Form */}
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="username" className="block text-sm font-semibold text-white mb-2.5">
-              Email or Username
+            <label htmlFor="email" className="block text-sm font-semibold text-white mb-2.5">
+              Email
             </label>
             <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
               className="glass-input w-full"
               placeholder="admin@example.com"
@@ -106,19 +115,6 @@ export default function Login() {
           <p className="text-xs text-slate-500 text-center mb-4 font-medium">
             No signup available. Admin accounts are created via system administrator.
           </p>
-          <div className="p-4 bg-white/5 backdrop-blur-md border border-white/10 rounded-lg">
-            <p className="text-xs font-semibold text-white mb-3 uppercase tracking-wide">Demo Credentials</p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400">Email:</span>
-                <code className="font-mono bg-white/10 px-2.5 py-1 rounded text-blue-300 text-xs font-semibold">admin@example.com</code>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400">Password:</span>
-                <code className="font-mono bg-white/10 px-2.5 py-1 rounded text-blue-300 text-xs font-semibold">password</code>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

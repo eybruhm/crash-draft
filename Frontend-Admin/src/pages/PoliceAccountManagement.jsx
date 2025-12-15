@@ -3,6 +3,7 @@ import { UserPlus, Edit3, Trash2, Save, X, MapPin, AlertCircle, CheckCircle } fr
 import { api } from '../services/api'
 import { validateEmail, validatePassword, validateCoordinates } from '../utils/validation'
 import { getErrorMessage } from '../utils/errors'
+import { getStoredUser } from '../utils/auth'
 
 /**
  * Police Account Management Page Component
@@ -25,8 +26,8 @@ export default function PoliceAccountManagement() {
   const [msg, setMsg] = useState({ type: '', text: '' })
   const [saving, setSaving] = useState(false)
   
-  const [addForm, setAddForm] = useState({ email: '', password: '', officeName: '', lat: '', lng: '', contact: '', headName: '', city: '', barangay: '' })
-  const [editForm, setEditForm] = useState({ officeName: '', lat: '', lng: '', contact: '', headName: '', city: '', barangay: '' })
+  const [addForm, setAddForm] = useState({ email: '', password: '', office_name: '', latitude: '', longitude: '', contact_number: '', head_officer: '' })
+  const [editForm, setEditForm] = useState({ email: '', password: '', office_name: '', latitude: '', longitude: '', contact_number: '', head_officer: '' })
 
   useEffect(() => {
     load()
@@ -47,13 +48,21 @@ export default function PoliceAccountManagement() {
 
   function openAddModal() {
     setShowAddModal(true)
-    setAddForm({ email: '', password: '', officeName: '', lat: '', lng: '', contact: '', headName: '', city: '', barangay: '' })
+    setAddForm({ email: '', password: '', office_name: '', latitude: '', longitude: '', contact_number: '', head_officer: '' })
     setMsg({ type: '', text: '' })
   }
 
   function openEditModal(p) {
-    setEditingId(p.id)
-    setEditForm({ officeName: p.officeName || '', lat: p.location?.lat || '', lng: p.location?.lng || '', contact: p.contact || '', headName: p.headName || '', city: p.city || '', barangay: p.barangay || '' })
+    setEditingId(p.office_id)
+    setEditForm({
+      email: p.email || '',
+      password: '',
+      office_name: p.office_name || '',
+      latitude: p.latitude ?? '',
+      longitude: p.longitude ?? '',
+      contact_number: p.contact_number || '',
+      head_officer: p.head_officer || '',
+    })
     setShowEditModal(true)
     setMsg({ type: '', text: '' })
   }
@@ -70,26 +79,31 @@ export default function PoliceAccountManagement() {
       setMsg({ type: 'error', text: 'Password must be at least 6 characters' })
       return
     }
-    if (addForm.lat && addForm.lng && !validateCoordinates(parseFloat(addForm.lat), parseFloat(addForm.lng))) {
+    if (addForm.latitude && addForm.longitude && !validateCoordinates(parseFloat(addForm.latitude), parseFloat(addForm.longitude))) {
       setMsg({ type: 'error', text: 'Invalid coordinates range' })
       return
     }
 
     setSaving(true)
     try {
+      const admin = getStoredUser()
+      if (!admin?.admin_id) {
+        throw new Error('Missing admin_id. Please log out and log in again.')
+      }
+
       const payload = {
         email: addForm.email,
         password: addForm.password,
-        officeName: addForm.officeName,
-        location: { lat: parseFloat(addForm.lat) || 0, lng: parseFloat(addForm.lng) || 0 },
-        contact: addForm.contact,
-        headName: addForm.headName,
-        city: addForm.city,
-        barangay: addForm.barangay,
+        office_name: addForm.office_name,
+        head_officer: addForm.head_officer || null,
+        contact_number: addForm.contact_number || null,
+        latitude: parseFloat(addForm.latitude) || 0,
+        longitude: parseFloat(addForm.longitude) || 0,
+        created_by: admin.admin_id,
       }
       await api.addPolice(payload)
       setMsg({ type: 'success', text: 'Police account registered successfully!' })
-      setAddForm({ email: '', password: '', officeName: '', lat: '', lng: '', contact: '', headName: '', city: '', barangay: '' })
+      setAddForm({ email: '', password: '', office_name: '', latitude: '', longitude: '', contact_number: '', head_officer: '' })
       load()
       setTimeout(() => {
         setShowAddModal(false)
@@ -105,21 +119,33 @@ export default function PoliceAccountManagement() {
     e.preventDefault()
     setMsg({ type: '', text: '' })
 
-    if (editForm.lat && editForm.lng && !validateCoordinates(parseFloat(editForm.lat), parseFloat(editForm.lng))) {
+    if (editForm.latitude && editForm.longitude && !validateCoordinates(parseFloat(editForm.latitude), parseFloat(editForm.longitude))) {
       setMsg({ type: 'error', text: 'Invalid coordinates range' })
+      return
+    }
+    if (!validatePassword(editForm.password)) {
+      setMsg({ type: 'error', text: 'Password must be at least 6 characters (required for updates).' })
       return
     }
 
     setSaving(true)
     try {
-      const updates = {
-        officeName: editForm.officeName,
-        location: { lat: parseFloat(editForm.lat) || 0, lng: parseFloat(editForm.lng) || 0 },
-        contact: editForm.contact,
-        headName: editForm.headName,
-        city: editForm.city,
-        barangay: editForm.barangay,
+      const admin = getStoredUser()
+      if (!admin?.admin_id) {
+        throw new Error('Missing admin_id. Please log out and log in again.')
       }
+
+      const updates = {
+        email: editForm.email,
+        password: editForm.password,
+        office_name: editForm.office_name,
+        head_officer: editForm.head_officer || null,
+        contact_number: editForm.contact_number || null,
+        latitude: parseFloat(editForm.latitude) || 0,
+        longitude: parseFloat(editForm.longitude) || 0,
+        created_by: admin.admin_id,
+      }
+
       await api.updatePolice(editingId, updates)
       setMsg({ type: 'success', text: 'Police account updated successfully!' })
       load()
@@ -135,8 +161,8 @@ export default function PoliceAccountManagement() {
   }
 
   async function handleDelete(id) {
-    const police_item = police.find((p) => p.id === id)
-    const ok = window.confirm(`Are you sure you want to delete "${police_item.officeName}"? This action cannot be undone.`)
+    const police_item = police.find((p) => p.office_id === id)
+    const ok = window.confirm(`Are you sure you want to delete "${police_item?.office_name || 'this office'}"? This action cannot be undone.`)
     if (!ok) return
 
     setDeletingId(id)
@@ -191,8 +217,6 @@ export default function PoliceAccountManagement() {
               <thead className="bg-white/10 border-b border-white/20">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Office Name</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">City</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">Barangay</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Head Officer</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Contact</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Email</th>
@@ -201,14 +225,12 @@ export default function PoliceAccountManagement() {
               </thead>
               <tbody className="divide-y divide-white/10">
                 {police.map((p) => (
-                  <tr key={p.id} className="hover:bg-white/10 transition-colors">
+                  <tr key={p.office_id} className="hover:bg-white/10 transition-colors">
                     <td className="px-6 py-4">
-                      <p className="font-semibold text-white">{p.officeName}</p>
+                      <p className="font-semibold text-white">{p.office_name}</p>
                     </td>
-                    <td className="px-6 py-4 text-slate-300">{p.city || 'N/A'}</td>
-                    <td className="px-6 py-4 text-slate-300">{p.barangay || 'N/A'}</td>
-                    <td className="px-6 py-4 text-slate-300">{p.headName || 'N/A'}</td>
-                    <td className="px-6 py-4 text-slate-300">{p.contact || 'N/A'}</td>
+                    <td className="px-6 py-4 text-slate-300">{p.head_officer || 'N/A'}</td>
+                    <td className="px-6 py-4 text-slate-300">{p.contact_number || 'N/A'}</td>
                     <td className="px-6 py-4 text-slate-300 text-sm">{p.email}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
@@ -220,12 +242,12 @@ export default function PoliceAccountManagement() {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(p.id)}
-                          disabled={deletingId === p.id}
+                          onClick={() => handleDelete(p.office_id)}
+                          disabled={deletingId === p.office_id}
                           className="flex items-center gap-2 px-3 py-2 bg-red-600/40 text-red-200 hover:bg-red-600/60 backdrop-blur-md border border-red-500/60 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
                         >
                           <Trash2 size={16} />
-                          {deletingId === p.id ? 'Deleting...' : 'Delete'}
+                          {deletingId === p.office_id ? 'Deleting...' : 'Delete'}
                         </button>
                       </div>
                     </td>
@@ -283,8 +305,8 @@ export default function PoliceAccountManagement() {
                 <label className="block text-sm font-medium text-white mb-2">Police Office Name</label>
                 <input
                   type="text"
-                  value={addForm.officeName}
-                  onChange={(e) => updateAddForm('officeName', e.target.value)}
+                  value={addForm.office_name}
+                  onChange={(e) => updateAddForm('office_name', e.target.value)}
                   className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
                   placeholder="Metro Police Station"
                 />
@@ -298,16 +320,16 @@ export default function PoliceAccountManagement() {
                   <input
                     type="number"
                     step="0.0001"
-                    value={addForm.lat}
-                    onChange={(e) => updateAddForm('lat', e.target.value)}
+                    value={addForm.latitude}
+                    onChange={(e) => updateAddForm('latitude', e.target.value)}
                     className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
                     placeholder="Latitude"
                   />
                   <input
                     type="number"
                     step="0.0001"
-                    value={addForm.lng}
-                    onChange={(e) => updateAddForm('lng', e.target.value)}
+                    value={addForm.longitude}
+                    onChange={(e) => updateAddForm('longitude', e.target.value)}
                     className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
                     placeholder="Longitude"
                   />
@@ -319,8 +341,8 @@ export default function PoliceAccountManagement() {
                   <label className="block text-sm font-medium text-white mb-2">Contact Number</label>
                   <input
                     type="tel"
-                    value={addForm.contact}
-                    onChange={(e) => updateAddForm('contact', e.target.value)}
+                    value={addForm.contact_number}
+                    onChange={(e) => updateAddForm('contact_number', e.target.value)}
                     className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
                     placeholder="+63 2 1234 5678"
                   />
@@ -329,33 +351,10 @@ export default function PoliceAccountManagement() {
                   <label className="block text-sm font-medium text-white mb-2">Head Officer Name</label>
                   <input
                     type="text"
-                    value={addForm.headName}
-                    onChange={(e) => updateAddForm('headName', e.target.value)}
+                    value={addForm.head_officer}
+                    onChange={(e) => updateAddForm('head_officer', e.target.value)}
                     className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
                     placeholder="Captain Juan Dela Cruz"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">City</label>
-                  <input
-                    type="text"
-                    value={addForm.city}
-                    onChange={(e) => updateAddForm('city', e.target.value)}
-                    className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
-                    placeholder="Manila"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Barangay</label>
-                  <input
-                    type="text"
-                    value={addForm.barangay}
-                    onChange={(e) => updateAddForm('barangay', e.target.value)}
-                    className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
-                    placeholder="Barangay Name"
                   />
                 </div>
               </div>
@@ -410,12 +409,36 @@ export default function PoliceAccountManagement() {
               </button>
             </div>
             <form onSubmit={handleEdit} className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Email *</label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => updateEditForm('email', e.target.value)}
+                    required
+                    className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">New Password *</label>
+                  <input
+                    type="password"
+                    value={editForm.password}
+                    onChange={(e) => updateEditForm('password', e.target.value)}
+                    required
+                    className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
+                    placeholder="Required for updates"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-white mb-2">Police Office Name</label>
                 <input
                   type="text"
-                  value={editForm.officeName}
-                  onChange={(e) => updateEditForm('officeName', e.target.value)}
+                  value={editForm.office_name}
+                  onChange={(e) => updateEditForm('office_name', e.target.value)}
                   className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
                 />
               </div>
@@ -428,16 +451,16 @@ export default function PoliceAccountManagement() {
                   <input
                     type="number"
                     step="0.0001"
-                    value={editForm.lat}
-                    onChange={(e) => updateEditForm('lat', e.target.value)}
+                    value={editForm.latitude}
+                    onChange={(e) => updateEditForm('latitude', e.target.value)}
                     className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
                     placeholder="Latitude"
                   />
                   <input
                     type="number"
                     step="0.0001"
-                    value={editForm.lng}
-                    onChange={(e) => updateEditForm('lng', e.target.value)}
+                    value={editForm.longitude}
+                    onChange={(e) => updateEditForm('longitude', e.target.value)}
                     className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
                     placeholder="Longitude"
                   />
@@ -449,8 +472,8 @@ export default function PoliceAccountManagement() {
                   <label className="block text-sm font-medium text-white mb-2">Contact Number</label>
                   <input
                     type="tel"
-                    value={editForm.contact}
-                    onChange={(e) => updateEditForm('contact', e.target.value)}
+                    value={editForm.contact_number}
+                    onChange={(e) => updateEditForm('contact_number', e.target.value)}
                     className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
                   />
                 </div>
@@ -458,29 +481,8 @@ export default function PoliceAccountManagement() {
                   <label className="block text-sm font-medium text-white mb-2">Head Officer Name</label>
                   <input
                     type="text"
-                    value={editForm.headName}
-                    onChange={(e) => updateEditForm('headName', e.target.value)}
-                    className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">City</label>
-                  <input
-                    type="text"
-                    value={editForm.city}
-                    onChange={(e) => updateEditForm('city', e.target.value)}
-                    className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Barangay</label>
-                  <input
-                    type="text"
-                    value={editForm.barangay}
-                    onChange={(e) => updateEditForm('barangay', e.target.value)}
+                    value={editForm.head_officer}
+                    onChange={(e) => updateEditForm('head_officer', e.target.value)}
                     className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
                   />
                 </div>

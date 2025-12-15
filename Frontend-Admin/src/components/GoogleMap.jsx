@@ -33,6 +33,23 @@ export default function GoogleMap({
   const userHasInteracted = useRef(false)
   const lastMarkerIds = useRef(new Set())
 
+  function getMarkerId(m) {
+    return m?.office_id || m?.id || null
+  }
+
+  function getMarkerLatLng(m) {
+    const latRaw = m?.latitude ?? m?.location?.lat ?? m?.lat
+    const lngRaw = m?.longitude ?? m?.location?.lng ?? m?.lng
+    const lat = Number(latRaw)
+    const lng = Number(lngRaw)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    return { lat, lng }
+  }
+
+  function getMarkerTitle(m) {
+    return m?.office_name || m?.officeName || 'Police Office'
+  }
+
   // Timeout to show error if loading takes too long
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -190,7 +207,7 @@ export default function GoogleMap({
     if (!map || !googleMaps || markers.length === 0) return
 
     // Get current marker IDs
-    const currentMarkerIds = new Set(markers.map(m => m.id).filter(Boolean))
+    const currentMarkerIds = new Set(markers.map(getMarkerId).filter(Boolean))
     
     // Check if there are actually new markers (not just array reference change)
     const hasNewMarkers = Array.from(currentMarkerIds).some(id => !lastMarkerIds.current.has(id))
@@ -205,8 +222,9 @@ export default function GoogleMap({
       let hasValidLocations = false
 
       markers.forEach((marker) => {
-        const lat = marker.location?.lat || marker.lat
-        const lng = marker.location?.lng || marker.lng
+        const pos = getMarkerLatLng(marker)
+        const lat = pos?.lat
+        const lng = pos?.lng
         
         if (lat && lng && lat !== 0 && lng !== 0) {
           bounds.extend(new googleMaps.LatLng(lat, lng))
@@ -217,8 +235,9 @@ export default function GoogleMap({
       if (hasValidLocations) {
         if (markers.length === 1) {
           const singleMarker = markers[0]
-          const lat = singleMarker.location?.lat || singleMarker.lat
-          const lng = singleMarker.location?.lng || singleMarker.lng
+          const pos = getMarkerLatLng(singleMarker)
+          const lat = pos?.lat
+          const lng = pos?.lng
           if (lat && lng && lat !== 0 && lng !== 0) {
             map.setCenter(new googleMaps.LatLng(lat, lng))
             map.setZoom(15)
@@ -248,21 +267,21 @@ export default function GoogleMap({
     let skippedMarkers = 0
 
     markers.forEach((markerData, index) => {
-      const lat = markerData.location?.lat ?? markerData.lat
-      const lng = markerData.location?.lng ?? markerData.lng
+      const pos = getMarkerLatLng(markerData)
+      const lat = pos?.lat
+      const lng = pos?.lng
 
       // Check if coordinates are valid (not 0,0 and within valid range)
       if (!lat || !lng || lat === 0 || lng === 0 || 
-          typeof lat !== 'number' || typeof lng !== 'number' ||
           lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-        console.warn(`[GoogleMap] Skipping marker ${index + 1} (${markerData.officeName || 'Unknown'}): Invalid coordinates`, { lat, lng })
+        console.warn(`[GoogleMap] Skipping marker ${index + 1} (${getMarkerTitle(markerData) || 'Unknown'}): Invalid coordinates`, { lat, lng })
         skippedMarkers++
         return
       }
 
       try {
         const position = new googleMaps.LatLng(lat, lng)
-        const isSelected = selectedMarker?.id === markerData.id
+        const isSelected = getMarkerId(selectedMarker) === getMarkerId(markerData)
 
         // Use uploaded PNG image for pin
         // Normal size: 32x32 pixels
@@ -279,7 +298,7 @@ export default function GoogleMap({
         const marker = new googleMaps.Marker({
           position,
           map,
-          title: markerData.officeName || 'Police Office',
+          title: getMarkerTitle(markerData),
           icon: {
             url: '/police-pin.png', // Image from public folder
             scaledSize: new googleMaps.Size(iconSize, iconSize), // Size of the icon
@@ -298,10 +317,9 @@ export default function GoogleMap({
         const infoWindow = new googleMaps.InfoWindow({
           content: `
             <div style="color: #000; padding: 8px;">
-              <h3 style="margin: 0 0 8px 0; font-weight: bold; font-size: 14px;">${markerData.officeName || 'Police Office'}</h3>
-              ${markerData.city ? `<p style="margin: 0; font-size: 12px; color: #666;">${markerData.city}</p>` : ''}
-              ${markerData.barangay ? `<p style="margin: 0; font-size: 12px; color: #666;">${markerData.barangay}</p>` : ''}
-              ${markerData.headName ? `<p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">Head: ${markerData.headName}</p>` : ''}
+              <h3 style="margin: 0 0 8px 0; font-weight: bold; font-size: 14px;">${getMarkerTitle(markerData)}</h3>
+              ${markerData.email ? `<p style="margin: 0; font-size: 12px; color: #666;">${markerData.email}</p>` : ''}
+              ${markerData.head_officer ? `<p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">Head: ${markerData.head_officer}</p>` : ''}
             </div>
           `
         })
@@ -334,7 +352,7 @@ export default function GoogleMap({
         newMarkers.push(marker)
         validMarkers++
       } catch (err) {
-        console.error(`[GoogleMap] Error creating marker for ${markerData.officeName || 'Unknown'}:`, err)
+        console.error(`[GoogleMap] Error creating marker for ${getMarkerTitle(markerData) || 'Unknown'}:`, err)
         skippedMarkers++
       }
     })
@@ -354,7 +372,7 @@ export default function GoogleMap({
       const markerData = marker.markerData
       if (!markerData) return
 
-      const isSelected = selectedMarker?.id === markerData.id
+      const isSelected = getMarkerId(selectedMarker) === getMarkerId(markerData)
       const iconSize = isSelected ? largeSize : normalSize
       
       // Anchor point at bottom center of the pin
@@ -396,7 +414,7 @@ export default function GoogleMap({
     if (!selectedMarker || mapMarkers.length === 0 || !map) return
 
     const selectedMapMarker = mapMarkers.find(
-      (m) => m.markerData?.id === selectedMarker.id
+      (m) => getMarkerId(m.markerData) === getMarkerId(selectedMarker)
     )
 
     if (selectedMapMarker?.infoWindow) {
