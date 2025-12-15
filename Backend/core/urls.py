@@ -20,6 +20,8 @@ from .views import (
     MediaViewSet,
     TopLocationsAPIView,
     AdminMapAPIView,
+    AdminManualReportCreateAPIView,
+    AdminUserSearchAPIView,
     ReverseGeocodeAPIView,
     AnalyticsUpdateAPIView,
 )
@@ -112,6 +114,12 @@ urlpatterns = [
     # =====================================================
     # GET /admin/map/data/ => AdminMapAPIView (returns active reports + offices + checkpoints)
     path('admin/map/data/', AdminMapAPIView.as_view(), name='admin-map-data'),
+
+    # POST /admin/reports/manual/ => AdminManualReportCreateAPIView (admin-only manual report tool)
+    path('admin/reports/manual/', AdminManualReportCreateAPIView.as_view(), name='admin-manual-report'),
+
+    # GET /admin/users/search/?q=... => AdminUserSearchAPIView (admin-only lookup tool)
+    path('admin/users/search/', AdminUserSearchAPIView.as_view(), name='admin-user-search'),
     
     # POST /admin/analytics/update/ => AnalyticsUpdateAPIView (recalculate statistics cache)
     path('admin/analytics/update/', AnalyticsUpdateAPIView.as_view(), name='analytics-update'),

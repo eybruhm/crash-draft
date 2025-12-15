@@ -26,7 +26,8 @@ const mapContainerStyle = { width: '100%', height: '320px' }
 
 // Marker icons for police office and report categories
 const markerIcons = {
-  policeOffice: new URL('../assets/markers/checkpoint-active.png', import.meta.url).href,
+  // Police office marker (swap file here if you want a different icon)
+  policeOffice: new URL('../assets/markers/police-office.png', import.meta.url).href,
   violence: new URL('../assets/markers/violence.png', import.meta.url).href,
   threat: new URL('../assets/markers/threat.png', import.meta.url).href,
   theft: new URL('../assets/markers/theft.png', import.meta.url).href,

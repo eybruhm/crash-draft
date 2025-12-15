@@ -198,13 +198,6 @@ const Dashboard = () => {
       'On Scene': { label: 'On Scene', className: 'status-on-scene' },
       'Resolved': { label: 'Resolved', className: 'status-resolved' },
       'Canceled': { label: 'Canceled', className: 'status-canceled' },
-      // Legacy support for lowercase (if old mock data exists)
-      'pending': { label: 'Pending', className: 'status-pending' },
-      'acknowledged': { label: 'Acknowledged', className: 'status-acknowledged' },
-      'en-route': { label: 'En Route', className: 'status-en-route' },
-      'on-scene': { label: 'On Scene', className: 'status-on-scene' },
-      'resolved': { label: 'Resolved', className: 'status-resolved' },
-      'canceled': { label: 'Canceled', className: 'status-canceled' },
     }
 
     const config = statusConfig[status] || statusConfig['Pending']

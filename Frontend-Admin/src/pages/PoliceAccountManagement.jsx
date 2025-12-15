@@ -4,6 +4,7 @@ import { api } from '../services/api'
 import { validateEmail, validatePassword, validateCoordinates } from '../utils/validation'
 import { getErrorMessage } from '../utils/errors'
 import { getStoredUser } from '../utils/auth'
+import PasswordInput from '../components/PasswordInput'
 
 /**
  * Police Account Management Page Component
@@ -19,6 +20,7 @@ import { getStoredUser } from '../utils/auth'
 export default function PoliceAccountManagement() {
   const [police, setPolice] = useState([])
   const [loading, setLoading] = useState(true)
+  const [scope, setScope] = useState('all') // 'all' | 'our'
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingId, setEditingId] = useState(null)
@@ -29,13 +31,19 @@ export default function PoliceAccountManagement() {
   const [addForm, setAddForm] = useState({ email: '', password: '', office_name: '', latitude: '', longitude: '', contact_number: '', head_officer: '' })
   const [editForm, setEditForm] = useState({ email: '', password: '', office_name: '', latitude: '', longitude: '', contact_number: '', head_officer: '' })
 
+  function norm7(value) {
+    const n = Number.parseFloat(value)
+    if (!Number.isFinite(n)) return 0
+    return Number(n.toFixed(7))
+  }
+
   useEffect(() => {
     load()
-  }, [])
+  }, [scope])
 
   function load() {
     setLoading(true)
-    api.listPolice().then(setPolice).finally(() => setLoading(false))
+    api.listPolice({ scope }).then(setPolice).finally(() => setLoading(false))
   }
 
   function updateAddForm(k, v) {
@@ -91,15 +99,21 @@ export default function PoliceAccountManagement() {
         throw new Error('Missing admin_id. Please log out and log in again.')
       }
 
+      // Build payload - only include optional fields if they have values
+      // Backend rejects empty strings for CharField with blank=True, null=True
       const payload = {
         email: addForm.email,
         password: addForm.password,
-        office_name: addForm.office_name,
-        head_officer: addForm.head_officer || null,
-        contact_number: addForm.contact_number || null,
-        latitude: parseFloat(addForm.latitude) || 0,
-        longitude: parseFloat(addForm.longitude) || 0,
-        created_by: admin.admin_id,
+        office_name: addForm.office_name || 'Unnamed Office',
+        latitude: norm7(addForm.latitude),
+        longitude: norm7(addForm.longitude),
+      }
+      // Only add optional fields if they have actual values
+      if (addForm.head_officer?.trim()) {
+        payload.head_officer = addForm.head_officer.trim()
+      }
+      if (addForm.contact_number?.trim()) {
+        payload.contact_number = addForm.contact_number.trim()
       }
       await api.addPolice(payload)
       setMsg({ type: 'success', text: 'Police account registered successfully!' })
@@ -109,6 +123,8 @@ export default function PoliceAccountManagement() {
         setShowAddModal(false)
       }, 1500)
     } catch (err) {
+      // Show DRF validation errors in UI (and keep a console trail for debugging)
+      console.error('[PoliceAccountManagement] addPolice failed:', err?.response?.data || err)
       setMsg({ type: 'error', text: getErrorMessage(err) })
     } finally {
       setSaving(false)
@@ -123,8 +139,9 @@ export default function PoliceAccountManagement() {
       setMsg({ type: 'error', text: 'Invalid coordinates range' })
       return
     }
-    if (!validatePassword(editForm.password)) {
-      setMsg({ type: 'error', text: 'Password must be at least 6 characters (required for updates).' })
+    // Password is optional on update; validate only if user entered something
+    if (editForm.password && !validatePassword(editForm.password)) {
+      setMsg({ type: 'error', text: 'Password must be at least 6 characters.' })
       return
     }
 
@@ -137,13 +154,14 @@ export default function PoliceAccountManagement() {
 
       const updates = {
         email: editForm.email,
-        password: editForm.password,
         office_name: editForm.office_name,
         head_officer: editForm.head_officer || null,
         contact_number: editForm.contact_number || null,
-        latitude: parseFloat(editForm.latitude) || 0,
-        longitude: parseFloat(editForm.longitude) || 0,
-        created_by: admin.admin_id,
+        latitude: norm7(editForm.latitude),
+        longitude: norm7(editForm.longitude),
+      }
+      if (editForm.password) {
+        updates.password = editForm.password
       }
 
       await api.updatePolice(editingId, updates)
@@ -184,13 +202,36 @@ export default function PoliceAccountManagement() {
           <h2 className="text-2xl font-bold text-white">Police Account Management</h2>
           <p className="text-slate-400 mt-1">Manage all police station accounts</p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600/60 text-white rounded-xl hover:bg-blue-600/80 transition-all backdrop-blur-md border border-blue-500/60 font-medium"
-        >
-          <UserPlus size={18} />
-          Add Police Account
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
+            <button
+              type="button"
+              onClick={() => setScope('all')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                scope === 'all' ? 'bg-blue-600/60 text-white' : 'text-slate-300 hover:bg-white/10'
+              }`}
+            >
+              All Accounts
+            </button>
+            <button
+              type="button"
+              onClick={() => setScope('our')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                scope === 'our' ? 'bg-blue-600/60 text-white' : 'text-slate-300 hover:bg-white/10'
+              }`}
+            >
+              Our Accounts
+            </button>
+          </div>
+
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600/60 text-white rounded-xl hover:bg-blue-600/80 transition-all backdrop-blur-md border border-blue-500/60 font-medium"
+          >
+            <UserPlus size={18} />
+            Add Police Account
+          </button>
+        </div>
       </div>
 
       {/* Data Display: List of Police Accounts (Editable Grid/Table) */}
@@ -217,6 +258,8 @@ export default function PoliceAccountManagement() {
               <thead className="bg-white/10 border-b border-white/20">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Office Name</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">Location</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">Created By</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Head Officer</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Contact</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Email</th>
@@ -229,6 +272,10 @@ export default function PoliceAccountManagement() {
                     <td className="px-6 py-4">
                       <p className="font-semibold text-white">{p.office_name}</p>
                     </td>
+                    <td className="px-6 py-4 text-slate-300">
+                      {[p.location_barangay, p.location_city].filter(Boolean).join(', ') || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 text-slate-300">{p.created_by_username || 'N/A'}</td>
                     <td className="px-6 py-4 text-slate-300">{p.head_officer || 'N/A'}</td>
                     <td className="px-6 py-4 text-slate-300">{p.contact_number || 'N/A'}</td>
                     <td className="px-6 py-4 text-slate-300 text-sm">{p.email}</td>
@@ -290,13 +337,13 @@ export default function PoliceAccountManagement() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">Password *</label>
-                  <input
-                    type="password"
+                  <PasswordInput
                     value={addForm.password}
                     onChange={(e) => updateAddForm('password', e.target.value)}
                     required
-                    className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
+                    className="w-full px-4 py-2 pr-12 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
                     placeholder="••••••••"
+                    autoComplete="new-password"
                   />
                 </div>
               </div>
@@ -421,14 +468,13 @@ export default function PoliceAccountManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">New Password *</label>
-                  <input
-                    type="password"
+                  <label className="block text-sm font-medium text-white mb-2">New Password (optional)</label>
+                  <PasswordInput
                     value={editForm.password}
                     onChange={(e) => updateEditForm('password', e.target.value)}
-                    required
-                    className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
-                    placeholder="Required for updates"
+                    className="w-full px-4 py-2 pr-12 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white placeholder-slate-400 outline-none transition-all"
+                    placeholder="Leave blank to keep the current password"
+                    autoComplete="new-password"
                   />
                 </div>
               </div>

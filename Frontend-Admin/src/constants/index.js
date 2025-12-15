@@ -13,6 +13,7 @@ export const ROUTES = {
 export const STORAGE_KEYS = {
   ADMIN_USER: 'crash_admin_user',
   ADMIN_TOKEN: 'crash_admin_token',
+  ADMIN_REFRESH: 'crash_admin_refresh_token',
 }
 
 // Django backend typically runs on port 8000

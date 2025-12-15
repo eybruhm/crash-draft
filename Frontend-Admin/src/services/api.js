@@ -24,8 +24,8 @@ export const api = {
    * Police office list (Admin).
    * Serializer: office_id, office_name, email, head_officer, contact_number, latitude, longitude
    */
-  async listPolice() {
-    const res = await apiClient.get('/admin/police-offices/')
+  async listPolice(params = {}) {
+    const res = await apiClient.get('/admin/police-offices/', { params })
     const data = unwrapListResponse(res.data)
     return Array.isArray(data) ? data : []
   },
@@ -41,16 +41,52 @@ export const api = {
 
   /**
    * Update police office (Admin).
-   * NOTE: backend currently uses PoliceOfficeCreateSerializer for updates,
-   * so password + created_by may be required.
+   * Uses PATCH so you can send only fields that changed.
+   * Password is optional for updates; send it only if you want to change it.
    */
   async updatePolice(officeId, payload) {
-    const res = await apiClient.put(`/admin/police-offices/${officeId}/`, payload)
+    const res = await apiClient.patch(`/admin/police-offices/${officeId}/`, payload)
     return res.data
   },
 
   async removePolice(officeId) {
     const res = await apiClient.delete(`/admin/police-offices/${officeId}/`)
+    return res.data
+  },
+
+  /**
+   * Admin dashboard map data (offices + checkpoints + reports).
+   * Backend: GET /admin/map/data/
+   */
+  async getAdminMapData(params = {}) {
+    const res = await apiClient.get('/admin/map/data/', { params })
+    return res.data
+  },
+
+  /**
+   * Public reverse geocode helper.
+   * Backend: GET /geocode/reverse/?lat=X&lng=Y
+   */
+  async reverseGeocode(lat, lng) {
+    const res = await apiClient.get('/geocode/reverse/', { params: { lat, lng } })
+    return res.data
+  },
+
+  /**
+   * Admin manual report creation (Admin1 tool).
+   * Backend: POST /admin/reports/manual/
+   */
+  async createManualReport(payload) {
+    const res = await apiClient.post('/admin/reports/manual/', payload)
+    return res.data
+  },
+
+  /**
+   * Admin user lookup helper (for manual report insertion).
+   * Backend: GET /admin/users/search/?q=...
+   */
+  async searchUsers(q) {
+    const res = await apiClient.get('/admin/users/search/', { params: { q } })
     return res.data
   },
 

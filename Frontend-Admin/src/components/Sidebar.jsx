@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ROUTES } from '../constants'
 import { getStoredUser, clearAuth } from '../utils/auth'
 import { useSidebar } from '../contexts/SidebarContext'
+import logoV1 from '../assets/logo/logo-v1.png'
 
 /**
  * Sidebar Component
@@ -67,13 +68,14 @@ export default function Sidebar() {
               onClick={toggleSidebar}
               className={`flex items-center gap-3 group transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'w-full lg:w-auto'}`}
             >
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center border border-blue-500/30 shadow-lg shadow-blue-500/20 group-hover:scale-105 group-hover:shadow-blue-500/30 transition-all duration-200 flex-shrink-0">
-                <span className="font-bold text-white text-xl">C</span>
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl border border-blue-500/30 shadow-lg shadow-blue-500/20 group-hover:scale-105 group-hover:shadow-blue-500/30 transition-all duration-200 flex-shrink-0 overflow-hidden">
+                {/* Logo: swap this import if you want a different version */}
+                <img src={logoV1} alt="CRASH" className="w-full h-full object-cover" />
               </div>
               {!isCollapsed && (
                 <div className="hidden lg:block overflow-hidden flex-1">
                   <h1 className="text-xl font-bold text-white tracking-tight whitespace-nowrap">CRASH Admin</h1>
-                  <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Law Enforcement System</p>
+                  {/* <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Law Enforcement System</p> */}
                 </div>
               )}
             </button>

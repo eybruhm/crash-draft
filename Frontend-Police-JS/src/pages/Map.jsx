@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle, Info, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Copy, Info, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api'
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -126,7 +126,7 @@ const MapPage = () => {
   const [editTarget, setEditTarget] = useState(null)
   const [selectedReport, setSelectedReport] = useState(null)
   const [selectedPin, setSelectedPin] = useState(null)
-  const [contextMenu, setContextMenu] = useState(null) // { x, y, lat, lng, address, loading }
+  const [contextMenu, setContextMenu] = useState(null) // { lat, lng, address_line, barangay, city, full_address, loading, error }
 
   // Toast helper
   const showToast = (message, type = 'success') => {
@@ -141,21 +141,31 @@ const MapPage = () => {
     
     // Set context menu with loading state
     setContextMenu({
-      x: e.domEvent.clientX,
-      y: e.domEvent.clientY,
-      lat: lat.toFixed(6),
-      lng: lng.toFixed(6),
-      address: null,
+      lat,
+      lng,
+      address_line: null,
+      barangay: null,
+      city: null,
+      full_address: null,
       loading: true,
+      error: null,
     })
     
     // Fetch full address from backend
     try {
       const geocodeData = await reverseGeocode(lat, lng)
-      setContextMenu(prev => prev ? { ...prev, address: geocodeData.full_address, loading: false } : null)
+      setContextMenu(prev => prev ? {
+        ...prev,
+        address_line: geocodeData.address_line || null,
+        barangay: geocodeData.barangay || null,
+        city: geocodeData.city || null,
+        full_address: geocodeData.full_address || null,
+        loading: false,
+        error: null,
+      } : null)
     } catch (error) {
       console.error('Failed to geocode:', error)
-      setContextMenu(prev => prev ? { ...prev, address: null, loading: false } : null)
+      setContextMenu(prev => prev ? { ...prev, loading: false, error: 'Unable to geocode this location.' } : null)
     }
   }
 
@@ -164,15 +174,14 @@ const MapPage = () => {
     if (!contextMenu) return
     let text = ''
     if (format === 'both') {
-      text = `${contextMenu.lat}, ${contextMenu.lng}`
+      text = `${contextMenu.lat.toFixed(7)}, ${contextMenu.lng.toFixed(7)}`
     } else if (format === 'lat') {
-      text = contextMenu.lat
+      text = String(contextMenu.lat.toFixed(7))
     } else if (format === 'lng') {
-      text = contextMenu.lng
+      text = String(contextMenu.lng.toFixed(7))
     }
     navigator.clipboard.writeText(text)
     showToast(`Copied: ${text}`, 'success')
-    setContextMenu(null)
   }
 
   // Close context menu when clicking elsewhere
@@ -183,6 +192,7 @@ const MapPage = () => {
       return () => document.removeEventListener('click', handleClick)
     }
   }, [contextMenu])
+
 
   // Fetch map data from backend
   const fetchMapData = useCallback(async () => {
@@ -195,7 +205,7 @@ const MapPage = () => {
       // Transform backend data to frontend format
       const transformedReports = (data.active_reports || []).map(mapReportToMarker)
       const transformedCheckpoints = (data.active_checkpoints || []).map(mapCheckpointToMarker)
-      
+
       setReports(transformedReports)
       setCheckpoints(transformedCheckpoints)
       setError(null)
@@ -487,65 +497,54 @@ const MapPage = () => {
                 ))}
             </GoogleMap>
 
-            {/* Right-click context menu for coordinates */}
+            {/* Right-click info panel (corner) - styled like Admin, but Police theme */}
             {contextMenu && (
               <div
-                className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 min-w-[200px] max-w-[320px]"
-                style={{
-                  left: contextMenu.x,
-                  top: contextMenu.y,
-                  transform: `translate(
-                    ${contextMenu.x > window.innerWidth - 320 ? '-100%' : '0'},
-                    ${contextMenu.y > window.innerHeight - 200 ? '-100%' : '0'}
-                  )`,
-                }}
+                className="absolute bottom-4 left-4 z-30 bg-white/95 backdrop-blur-xl rounded-lg shadow-2xl border border-white/50 p-4 w-[360px] max-w-[90vw]"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Full Address Section */}
-                {contextMenu.loading ? (
-                  <div className="px-3 py-2 border-b border-gray-100">
-                    <p className="text-xs text-gray-500 font-medium">Address</p>
-                    <p className="text-sm text-gray-400 italic">Loading address...</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-gray-900 font-semibold">Map location</p>
+                    <p className="text-xs text-gray-600 mt-1">Right-click anywhere on the map to refresh</p>
                   </div>
-                ) : contextMenu.address ? (
-                  <div className="px-3 py-2 border-b border-gray-100">
-                    <p className="text-xs text-gray-500 font-medium">Address</p>
-                    <p className="text-sm text-gray-800 break-words">
-                      {contextMenu.address}
-                    </p>
-                  </div>
-                ) : null}
-
-                {/* Coordinates Section */}
-                <div className="px-3 py-2 border-b border-gray-100">
-                  <p className="text-xs text-gray-500 font-medium">Coordinates</p>
-                  <p className="text-sm font-mono text-gray-800">
-                    {contextMenu.lat}, {contextMenu.lng}
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setContextMenu(null)}
+                    className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
                 </div>
 
-                {/* Copy Actions */}
-                <button
-                  onClick={() => copyCoordinates('both')}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                >
-                  <MapPin className="h-4 w-4 mr-2 text-gray-500" />
-                  Copy coordinates
-                </button>
-                <button
-                  onClick={() => copyCoordinates('lat')}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                >
-                  <span className="w-4 h-4 mr-2 text-xs font-mono text-gray-500">Lat</span>
-                  Copy latitude only
-                </button>
-                <button
-                  onClick={() => copyCoordinates('lng')}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                >
-                  <span className="w-4 h-4 mr-2 text-xs font-mono text-gray-500">Lng</span>
-                  Copy longitude only
-                </button>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-mono text-primary-700">
+                      {contextMenu.lat.toFixed(7)}, {contextMenu.lng.toFixed(7)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => copyCoordinates('both')}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-primary-600 text-white hover:bg-primary-700 rounded-lg text-xs font-semibold shadow"
+                    >
+                      <Copy className="h-4 w-4" /> Copy
+                    </button>
+                  </div>
+
+                  {contextMenu.loading ? (
+                    <p className="text-gray-600 text-sm">Getting address…</p>
+                  ) : contextMenu.error ? (
+                    <p className="text-gray-600 text-sm">{contextMenu.error}</p>
+                  ) : (
+                    <>
+                      <p className="text-gray-900 text-sm font-semibold">{contextMenu.full_address || 'N/A'}</p>
+                      <p className="text-gray-600 text-xs">
+                        {contextMenu.address_line || ''}{contextMenu.address_line ? ' • ' : ''}{contextMenu.barangay || 'N/A'} • {contextMenu.city || 'N/A'}
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
             )}
 

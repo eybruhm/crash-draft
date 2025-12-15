@@ -111,6 +111,24 @@ Sub-steps (options):
 •	Option B: Admin can create manual reports via a dedicated admin endpoint:
 •	POST /api/v1/admin/reports/manual/ (separate from mobile + police endpoints)
 Description: Separate endpoints reduce the chance of impacting Police logic.
+Step 3: Implement the Admin1-safe manual report tool (Option B, aligned with 911 offline flow)
+Sub-steps:
+1.	Backend: Add admin-only endpoint:
+•	POST /api/v1/admin/reports/manual/
+2.	Backend rules (safety):
+•	role must be admin (JWT)
+•	assigned_office is REQUIRED (911 dispatch chooses office)
+•	status allowed: Pending or Resolved (so 911-resolved cases count in analytics)
+•	if status=Resolved, backend updates analytics cache row for that (city, barangay, category)
+•	location_city/location_barangay auto-filled via reverse geocode
+3.	Frontend: Enable Manual Report page (3 tabs):
+•	Tab 1: Manual Report Insert Form
+  - required: category, lat/lng, assigned office UUID
+  - optional: reporter UUID, description, remarks, created_at/updated_at, status (Pending/Resolved)
+•	Tab 2: User Search (find user UUID by email/name/phone, copy/select)
+•	Tab 3: Police Search (find office UUID, copy/select)
+•	Office dropdown: alphabetical + searchable (handles 1000+ offices)
+Description: Admin gets a “data tool” without touching Police report workflows or status transitions.
 ________________________________________
 DAY 5: Admin Dashboard (Real Metrics)
 Goal: Replace Admin dashboard mock widgets with real backend data.

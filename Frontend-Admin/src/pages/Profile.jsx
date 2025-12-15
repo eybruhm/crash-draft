@@ -5,6 +5,7 @@ import { clearAuth, getStoredUser } from '../utils/auth'
 import { validatePassword, validateEmail } from '../utils/validation'
 import { getErrorMessage } from '../utils/errors'
 import { ROUTES } from '../constants'
+import PasswordInput from '../components/PasswordInput'
 
 /**
  * Profile & Settings Page Component
@@ -226,12 +227,12 @@ export default function Profile() {
                 <div className="space-y-4 bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-lg">
                   <div>
                     <label className="block text-sm font-medium text-white mb-2">New Password</label>
-                    <input
-                      type="password"
+                    <PasswordInput
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 outline-none text-white placeholder-slate-400"
+                      className="w-full px-4 py-2 pr-12 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 outline-none text-white placeholder-slate-400"
+                      autoComplete="new-password"
                     />
                   </div>
 

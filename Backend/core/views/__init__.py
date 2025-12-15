@@ -9,11 +9,11 @@ import uuid as uuid_module
 
 from django.http import HttpResponse
 from django.db import transaction
-from django.db.models import Count, F, Value
+from django.db.models import Count, F, Value, Q
 from django.db.models.functions import Coalesce
 from django.core.cache import cache
 from django.utils import timezone
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
@@ -34,6 +34,8 @@ from ..serializers import (
     AdminSerializer,
     PoliceOfficeLoginSerializer,
     PoliceOfficeCreateSerializer,
+    PoliceOfficeUpdateSerializer,
+    AdminManualReportCreateSerializer,
     ReportCreateSerializer,
     ReportListSerializer,
     ReportStatusUpdateSerializer,
@@ -116,17 +118,27 @@ class LoginAPIView(APIView):
         email = request.data.get('email')
         password = request.data.get('password')
 
+        # Normalize common formatting issues from web forms (safe)
+        # - Email: strip whitespace
+        # - Password: keep as-is, but we may retry with stripped version if user accidentally copied spaces
+        if isinstance(email, str):
+            email = email.strip()
+
         # Validate: both email and password must be provided
         if not email or not password:
             return Response({
                 "detail": "Email and password are required."
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        password_stripped = password.strip() if isinstance(password, str) else password
+
         # Try Admin login first: search database for admin with this email
         try:
             admin_user = Admin.objects.get(email=email)
             # Check password against hashed password in database
-            if check_password(password, admin_user.password):
+            if check_password(password, admin_user.password) or (
+                isinstance(password, str) and password != password_stripped and check_password(password_stripped, admin_user.password)
+            ):
                 # Generate JWT tokens for this user
                 # RefreshToken generates both access and refresh tokens
                 refresh = RefreshToken()
@@ -152,7 +164,9 @@ class LoginAPIView(APIView):
         try:
             police_office = PoliceOffice.objects.get(email=email)
             # Check password against hashed password in database
-            if check_password(password, police_office.password_hash):
+            if check_password(password, police_office.password_hash) or (
+                isinstance(password, str) and password != password_stripped and check_password(password_stripped, police_office.password_hash)
+            ):
                 # Generate JWT tokens for this police office
                 refresh = RefreshToken()
                 refresh['user_id'] = str(police_office.office_id)
@@ -190,34 +204,111 @@ class PoliceOfficeAdminViewSet(viewsets.ModelViewSet):
     # Output: Office data (for list/retrieve/update)
     # Note: Excludes test account to keep database clean
 
-    # Start with all police offices except test account
-    queryset = PoliceOffice.objects.all().exclude(email='test@crash.ph')
+    # Start with all police offices
+    # NOTE: We previously excluded the test account (test@crash.ph), but that caused confusion
+    # when admins couldn't find "Test Police Station" in lists/search.
+    queryset = PoliceOffice.objects.all()
     serializer_class = PoliceOfficeCreateSerializer
 
     # Choose the right serializer based on the action being performed
-    # Create/Update = need password handling (PoliceOfficeCreateSerializer)
+    # Create = requires password (PoliceOfficeCreateSerializer)
+    # Update = password is optional (PoliceOfficeUpdateSerializer)
     # Retrieve/List = no password needed (PoliceOfficeLoginSerializer)
     def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update']:
+        if self.action == 'create':
             return PoliceOfficeCreateSerializer
+        if self.action in ['update', 'partial_update']:
+            return PoliceOfficeUpdateSerializer
         return PoliceOfficeLoginSerializer
 
     # Override the save process when creating a new police office
     # Make sure we link it to the admin who created it
     def perform_create(self, serializer):
-        # Get the admin ID from the request (who is creating this office)
-        admin_id_str = self.request.data.get('created_by')
+        # Admin-only endpoint: derive admin_id from JWT (do NOT trust client-provided created_by)
+        admin_id_str = getattr(self.request, 'user_id', None)
         if not admin_id_str:
-            return Response({"created_by": "This field is required."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Find the admin in the database
+            raise serializers.ValidationError({"detail": "Missing admin identity. Please log in again."})
+
         try:
             admin_instance = Admin.objects.get(admin_id=admin_id_str)
         except Admin.DoesNotExist:
-            return Response({"created_by": "Admin account not found."}, status=status.HTTP_404_NOT_FOUND)
-        
-        # Save the office with the admin link
-        serializer.save(created_by=admin_instance)
+            raise serializers.ValidationError({"detail": "Admin account not found. Please log in again."})
+
+        office = serializer.save(created_by=admin_instance)
+
+        # Auto-geocode office location (city/barangay) using the existing helper
+        try:
+            city, barangay = reverse_geocode(office.latitude, office.longitude)
+            office.location_city = city
+            office.location_barangay = barangay
+            office.save(update_fields=['location_city', 'location_barangay'])
+        except Exception:
+            # Don't block creation if geocoding fails (API key/quota/network)
+            pass
+
+    def perform_update(self, serializer):
+        office = serializer.save()
+        # If coordinates changed, refresh cached city/barangay
+        try:
+            city, barangay = reverse_geocode(office.latitude, office.longitude)
+            office.location_city = city
+            office.location_barangay = barangay
+            office.save(update_fields=['location_city', 'location_barangay'])
+        except Exception:
+            pass
+
+    def get_queryset(self):
+        qs = super().get_queryset().select_related('created_by')
+        scope = (self.request.query_params.get('scope') or 'all').lower()
+        if scope == 'our' and getattr(self.request, 'user_id', None):
+            qs = qs.filter(created_by_id=self.request.user_id)
+        return qs
+
+    def _require_admin(self, request):
+        is_valid, user_id, role, error_response = validate_jwt_token(request)
+        if not is_valid:
+            return error_response
+        if role != 'admin':
+            return Response({"detail": "Admin access required."}, status=status.HTTP_403_FORBIDDEN)
+        request.user_id = user_id
+        request.user_role = role
+        return None
+
+    def list(self, request, *args, **kwargs):
+        err = self._require_admin(request)
+        if err:
+            return err
+        return super().list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        err = self._require_admin(request)
+        if err:
+            return err
+        return super().retrieve(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        err = self._require_admin(request)
+        if err:
+            return err
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        err = self._require_admin(request)
+        if err:
+            return err
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        err = self._require_admin(request)
+        if err:
+            return err
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        err = self._require_admin(request)
+        if err:
+            return err
+        return super().destroy(request, *args, **kwargs)
 
 
 # ============================================================================
@@ -716,6 +807,126 @@ class AdminMapAPIView(APIView):
             'active_checkpoints': checkpoints_data,
         }
         return Response(payload, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# ADMIN MANUAL REPORT CREATE (Admin-only, safe endpoint)
+# ============================================================================
+
+class AdminManualReportCreateAPIView(APIView):
+    """
+    ENDPOINT: POST /admin/reports/manual/
+    Purpose: Admin1 data tool - create a report manually without touching mobile/police flows.
+
+    Policy (911 offline insert):
+    - Admin can CREATE only (no edit/delete/status workflow in Admin web)
+    - assigned_office is REQUIRED (911 dispatch chooses the office)
+    - status allowed: Pending or Resolved (so 911-resolved cases still count in analytics)
+    - created_at/updated_at optional: can be provided for accurate timelines
+    - location_city/location_barangay are auto-filled via reverse geocode
+    """
+
+    def post(self, request):
+        is_valid, user_id, role, error_response = validate_jwt_token(request)
+        if not is_valid:
+            return error_response
+        if role != 'admin':
+            return Response({"detail": "Admin access required."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = AdminManualReportCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        latitude = serializer.validated_data.get('latitude')
+        longitude = serializer.validated_data.get('longitude')
+        status_value = serializer.validated_data.get('status') or 'Pending'
+        created_at_value = serializer.validated_data.get('created_at')
+        updated_at_value = serializer.validated_data.get('updated_at')
+
+        # Auto-geocode
+        city, barangay = reverse_geocode(latitude, longitude)
+
+        # 911 dispatch chooses which office handled the report (required)
+        assigned_office = serializer.validated_data.get('assigned_office')
+
+        report = serializer.save(
+            status=status_value,
+            assigned_office=assigned_office,
+            location_city=city,
+            location_barangay=barangay,
+        )
+
+        # If admin inserted as Resolved and no updated_at provided, set updated_at=now
+        if status_value == 'Resolved' and not updated_at_value:
+            updated_at_value = timezone.now()
+
+        # Allow overriding timestamps for offline 911 reports (post-save update)
+        update_fields = {}
+        if created_at_value:
+            update_fields['created_at'] = created_at_value
+        if updated_at_value:
+            update_fields['updated_at'] = updated_at_value
+        if update_fields:
+            Report.objects.filter(report_id=report.report_id).update(**update_fields)
+            report = Report.objects.select_related('reporter', 'assigned_office').get(report_id=report.report_id)
+
+        # If created as Resolved, bump summary analytics so it counts immediately
+        if status_value == 'Resolved' and report.location_city and report.location_barangay and report.category:
+            with transaction.atomic():
+                obj, _created = SummaryAnalytics.objects.select_for_update().get_or_create(
+                    location_city=report.location_city,
+                    location_barangay=report.location_barangay,
+                    category=report.category,
+                    defaults={'report_count': 0},
+                )
+                SummaryAnalytics.objects.filter(summary_id=obj.summary_id).update(
+                    report_count=F('report_count') + 1,
+                    last_updated=timezone.now(),
+                )
+
+        # Return full report view payload for immediate UI display
+        return Response(ReportListSerializer(report).data, status=status.HTTP_201_CREATED)
+
+
+# ============================================================================
+# ADMIN USER SEARCH (Admin manual report helper)
+# ============================================================================
+
+class AdminUserSearchAPIView(APIView):
+    """
+    ENDPOINT: GET /admin/users/search/?q=...
+    Purpose: Help Admin find a user UUID from name/email/phone for manual report inserts.
+    """
+
+    def get(self, request):
+        is_valid, user_id, role, error_response = validate_jwt_token(request)
+        if not is_valid:
+            return error_response
+        if role != 'admin':
+            return Response({"detail": "Admin access required."}, status=status.HTTP_403_FORBIDDEN)
+
+        q = (request.query_params.get('q') or '').strip()
+
+        qs = User.objects.all().order_by('-created_at')
+        if q:
+            qs = qs.filter(
+                Q(email__icontains=q) |
+                Q(phone__icontains=q) |
+                Q(first_name__icontains=q) |
+                Q(last_name__icontains=q)
+            )
+
+        results = list(qs.values(
+            'user_id',
+            'first_name',
+            'last_name',
+            'email',
+            'phone',
+            'region',
+            'city',
+            'barangay',
+            'created_at',
+        )[:50])
+        return Response(results, status=status.HTTP_200_OK)
 
 
 # ============================================================================

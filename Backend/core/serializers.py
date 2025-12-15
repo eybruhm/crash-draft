@@ -78,10 +78,23 @@ class AdminSerializer(serializers.ModelSerializer):
 # Used when: Returning police office data to logged-in officers (after login)
 # Output: Office info WITHOUT password (password_hash stays in database, never shown)
 class PoliceOfficeLoginSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     class Meta:
         model = PoliceOffice
         # Shows identification info + location for directions, hides sensitive password field
-        fields = ('office_id', 'office_name', 'email', 'head_officer', 'contact_number', 'latitude', 'longitude')
+        fields = (
+            'office_id',
+            'office_name',
+            'email',
+            'head_officer',
+            'contact_number',
+            'location_city',
+            'location_barangay',
+            'latitude',
+            'longitude',
+            'created_by',
+            'created_by_username',
+        )
 
 # POLICE OFFICE CREATION SERIALIZER
 # Used when: Admin creates a new police office (includes password handling)
@@ -100,7 +113,11 @@ class PoliceOfficeCreateSerializer(serializers.ModelSerializer):
             'contact_number', 'latitude', 'longitude', 'created_by'
         )
         extra_kwargs = {
-            'password_hash': {'write_only': True} 
+            'password_hash': {'write_only': True},
+            # Match model: head_officer/contact_number are optional
+            'head_officer': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'contact_number': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'created_by': {'required': False, 'allow_null': True},
         }
     
     # Override create() to handle password hashing before saving to database
@@ -115,6 +132,43 @@ class PoliceOfficeCreateSerializer(serializers.ModelSerializer):
         
         # Create and save the PoliceOffice with the hashed password
         return PoliceOffice.objects.create(**validated_data)
+
+
+# POLICE OFFICE UPDATE SERIALIZER
+# Used when: Admin updates an existing police office (password is optional)
+# Input: Same fields as create, but password is optional (only hash if provided)
+class PoliceOfficeUpdateSerializer(serializers.ModelSerializer):
+    # Password is optional for updates - only change if provided
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    
+    class Meta:
+        model = PoliceOffice
+        fields = (
+            'office_name', 'email', 'password', 'head_officer', 
+            'contact_number', 'latitude', 'longitude'
+        )
+        extra_kwargs = {
+            'office_name': {'required': False},
+            'email': {'required': False},
+            'head_officer': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'contact_number': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'latitude': {'required': False},
+            'longitude': {'required': False},
+        }
+    
+    def update(self, instance, validated_data):
+        # Handle optional password update
+        password = validated_data.pop('password', None)
+        if password:
+            instance.password_hash = make_password(password)
+        
+        # Update all other fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        instance.save()
+        return instance
+
     
 # ============================================================================
 # REPORT SERIALIZERS
@@ -142,6 +196,42 @@ class ReportCreateSerializer(serializers.ModelSerializer):
             'location_city': {'required': False},
             'location_barangay': {'required': False},
         }
+
+
+# ADMIN MANUAL REPORT SERIALIZER (Admin1 tool)
+# Used when: Admin creates a report manually (separate from citizen mobile flow)
+# Safety: Admin cannot set status directly; backend forces 'Pending'
+class AdminManualReportCreateSerializer(serializers.ModelSerializer):
+    # 911 provides which office handled the case; require this for manual inserts.
+    assigned_office = serializers.PrimaryKeyRelatedField(
+        queryset=PoliceOffice.objects.all(),
+        required=True,
+        allow_null=False,
+    )
+    reporter = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    status = serializers.ChoiceField(choices=['Pending', 'Resolved'], required=False)
+    created_at = serializers.DateTimeField(required=False, allow_null=True)
+    updated_at = serializers.DateTimeField(required=False, allow_null=True)
+    remarks = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    class Meta:
+        model = Report
+        fields = (
+            'category',
+            'description',
+            'latitude',
+            'longitude',
+            'reporter',
+            'assigned_office',
+            'status',
+            'remarks',
+            'created_at',
+            'updated_at',
+        )
 
 # REPORT LIST SERIALIZER
 # Used when: Returning report data to police dashboard (reading reports)

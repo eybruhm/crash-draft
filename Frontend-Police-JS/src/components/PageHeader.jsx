@@ -1,6 +1,7 @@
 import { LogOut } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import logoV1 from '../assets/logo/logo-v1.png'
 
 const PageHeader = ({ onLogout }) => {
   const navigate = useNavigate()
@@ -20,8 +21,9 @@ const PageHeader = ({ onLogout }) => {
       <div className="w-full max-w-7xl mx-auto px-6">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-4">
-            <div className="h-10 w-10 bg-white rounded-lg flex items-center justify-center shadow-xl ring-2 ring-white/50 hover:scale-105 transition-transform">
-              <span className="text-primary-600 text-lg font-bold">C</span>
+            <div className="h-10 w-10 bg-white rounded-lg shadow-xl ring-2 ring-white/50 hover:scale-105 transition-transform overflow-hidden">
+              {/* Logo: swap this import if you want a different version */}
+              <img src={logoV1} alt="CRASH" className="h-full w-full object-cover" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-white drop-shadow-md">CRASH</h1>

@@ -7,25 +7,34 @@
 import { STORAGE_KEYS } from '../constants'
 
 export function getStoredUser() {
-  const userJson = sessionStorage.getItem(STORAGE_KEYS.ADMIN_USER)
+  const userJson = localStorage.getItem(STORAGE_KEYS.ADMIN_USER)
   return userJson ? JSON.parse(userJson) : null
 }
 
 export function storeUser(user) {
-  sessionStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(user))
+  localStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(user))
 }
 
 export function getStoredToken() {
-  return sessionStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN)
+  return localStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN)
 }
 
 export function storeToken(token) {
-  sessionStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, token)
+  localStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, token)
+}
+
+export function getStoredRefreshToken() {
+  return localStorage.getItem(STORAGE_KEYS.ADMIN_REFRESH)
+}
+
+export function storeRefreshToken(token) {
+  localStorage.setItem(STORAGE_KEYS.ADMIN_REFRESH, token)
 }
 
 export function clearAuth() {
-  sessionStorage.removeItem(STORAGE_KEYS.ADMIN_USER)
-  sessionStorage.removeItem(STORAGE_KEYS.ADMIN_TOKEN)
+  localStorage.removeItem(STORAGE_KEYS.ADMIN_USER)
+  localStorage.removeItem(STORAGE_KEYS.ADMIN_TOKEN)
+  localStorage.removeItem(STORAGE_KEYS.ADMIN_REFRESH)
 }
 
 export function isAuthenticated() {

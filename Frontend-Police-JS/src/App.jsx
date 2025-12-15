@@ -5,12 +5,15 @@ import Dashboard from './pages/Dashboard'
 import MapPage from './pages/Map'
 import Analytics from './pages/Analytics'
 import ResolvedCases from './pages/ResolvedCases'
+import GlobalReportNotifier from './components/GlobalReportNotifier'
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <div className="animated-background min-h-screen">
+          {/* Plays new-report sound across ALL pages while logged in */}
+          <GlobalReportNotifier />
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />

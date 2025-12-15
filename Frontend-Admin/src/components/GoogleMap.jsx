@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadGoogleMapsApi } from '../utils/googleMaps'
 import { GOOGLE_API_KEY } from '../constants'
+// Marker image assets (easy to swap later)
+// NOTE: Replace these files if you want different marker designs.
+import policeOfficeMarker from '../assets/markers/police-office.png'
+import policeCheckpointMarker from '../assets/markers/police-checkpoint.png'
 
 /**
  * GoogleMap Component
@@ -18,8 +22,8 @@ import { GOOGLE_API_KEY } from '../constants'
 export default function GoogleMap({ 
   markers = [], 
   onMarkerClick,
-  onInfoWindowClose,
   selectedMarker,
+  onMapRightClick,
   defaultCenter = { lat: 14.5995, lng: 120.9842 }, // Default to Manila, Philippines
   defaultZoom = 10 
 }) {
@@ -34,7 +38,7 @@ export default function GoogleMap({
   const lastMarkerIds = useRef(new Set())
 
   function getMarkerId(m) {
-    return m?.office_id || m?.id || null
+    return m?.office_id || m?.checkpoint_id || m?.id || null
   }
 
   function getMarkerLatLng(m) {
@@ -47,7 +51,12 @@ export default function GoogleMap({
   }
 
   function getMarkerTitle(m) {
+    if (m?.checkpoint_name) return m.checkpoint_name
     return m?.office_name || m?.officeName || 'Police Office'
+  }
+
+  function getMarkerType(m) {
+    return m?.type || (m?.checkpoint_id ? 'checkpoint' : 'office')
   }
 
   // Timeout to show error if loading takes too long
@@ -140,6 +149,18 @@ export default function GoogleMap({
                     featureType: 'poi',
                     elementType: 'geometry',
                     stylers: [{ color: '#1f2937' }]
+                  },
+                  // Hide Google POI icons/markers so OUR markers are clearly visible,
+                  // but keep helpful text labels like street/building names.
+                  {
+                    featureType: 'poi',
+                    elementType: 'labels.icon',
+                    stylers: [{ visibility: 'off' }]
+                  },
+                  {
+                    featureType: 'transit',
+                    elementType: 'labels.icon',
+                    stylers: [{ visibility: 'off' }]
                   }
                 ],
                 disableDefaultUI: false,
@@ -201,6 +222,27 @@ export default function GoogleMap({
       if (zoomListener) googleMaps.event.removeListener(zoomListener)
     }
   }, [map, googleMaps, defaultZoom])
+
+  // Right-click handler (Admin dashboard helper)
+  useEffect(() => {
+    if (!map || !googleMaps || !onMapRightClick) return
+
+    const listener = map.addListener('rightclick', (e) => {
+      try {
+        const lat = e?.latLng?.lat?.()
+        const lng = e?.latLng?.lng?.()
+        if (typeof lat === 'number' && typeof lng === 'number') {
+          onMapRightClick(lat, lng)
+        }
+      } catch {
+        // ignore
+      }
+    })
+
+    return () => {
+      if (listener) googleMaps.event.removeListener(listener)
+    }
+  }, [map, googleMaps, onMapRightClick])
 
   // Update map center and zoom only on initial load or when new markers are added
   useEffect(() => {
@@ -282,28 +324,43 @@ export default function GoogleMap({
       try {
         const position = new googleMaps.LatLng(lat, lng)
         const isSelected = getMarkerId(selectedMarker) === getMarkerId(markerData)
+        const markerType = getMarkerType(markerData)
 
-        // Use uploaded PNG image for pin
-        // Normal size: 32x32 pixels
-        // Large size: 40x40 pixels (selected)
-        const normalSize = 32
-        const largeSize = 40
-        const iconSize = isSelected ? largeSize : normalSize
-        
-        // Anchor point at bottom center of the pin (typical for location pins)
+        // Use marker assets from src/assets/markers
+        // Adjust sizes here if you want bigger/smaller markers.
+        const normalOfficeSize = 38
+        const largeOfficeSize = 46
+        const normalCheckpointSize = 28
+        const largeCheckpointSize = 34
+
+        const iconSize =
+          markerType === 'checkpoint'
+            ? (isSelected ? largeCheckpointSize : normalCheckpointSize)
+            : (isSelected ? largeOfficeSize : normalOfficeSize)
+
+        // Anchor point at bottom center (pins)
         const anchorX = iconSize / 2
         const anchorY = iconSize
         
-        // Create marker with PNG image
+        // Create marker
         const marker = new googleMaps.Marker({
           position,
           map,
           title: getMarkerTitle(markerData),
-          icon: {
-            url: '/police-pin.png', // Image from public folder
-            scaledSize: new googleMaps.Size(iconSize, iconSize), // Size of the icon
-            anchor: new googleMaps.Point(anchorX, anchorY), // Anchor at bottom center
-          },
+          icon:
+            markerType === 'checkpoint'
+              ? {
+                  // Checkpoint marker image (src/assets/markers/police-checkpoint.png)
+                  url: policeCheckpointMarker,
+                  scaledSize: new googleMaps.Size(iconSize, iconSize),
+                  anchor: new googleMaps.Point(anchorX, anchorY),
+                }
+              : {
+                  // Police office marker image (src/assets/markers/police-office.png)
+                  url: policeOfficeMarker,
+                  scaledSize: new googleMaps.Size(iconSize, iconSize),
+                  anchor: new googleMaps.Point(anchorX, anchorY),
+                },
           label: {
             text: '',
             color: '#ffffff',
@@ -313,41 +370,12 @@ export default function GoogleMap({
           zIndex: isSelected ? 1000 : 1
         })
 
-        // Add info window
-        const infoWindow = new googleMaps.InfoWindow({
-          content: `
-            <div style="color: #000; padding: 8px;">
-              <h3 style="margin: 0 0 8px 0; font-weight: bold; font-size: 14px;">${getMarkerTitle(markerData)}</h3>
-              ${markerData.email ? `<p style="margin: 0; font-size: 12px; color: #666;">${markerData.email}</p>` : ''}
-              ${markerData.head_officer ? `<p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">Head: ${markerData.head_officer}</p>` : ''}
-            </div>
-          `
-        })
-
         // Add click listener
         marker.addListener('click', () => {
-          // Close all other info windows
-          newMarkers.forEach((m) => {
-            if (m.infoWindow && m !== marker) {
-              m.infoWindow.close()
-            }
-          })
-          // Don't open info window here - let the selectedMarker effect handle it
-          // This prevents double opening
           if (onMarkerClick) {
             onMarkerClick(markerData)
           }
         })
-
-        // Add close listener for info window
-        infoWindow.addListener('closeclick', () => {
-          // When info window is closed, also close the detail panel
-          if (onInfoWindowClose) {
-            onInfoWindowClose()
-          }
-        })
-
-        marker.infoWindow = infoWindow
         marker.markerData = markerData
         newMarkers.push(marker)
         validMarkers++
@@ -358,33 +386,45 @@ export default function GoogleMap({
     })
 
     setMapMarkers(newMarkers)
-  }, [map, googleMaps, markers, onMarkerClick, onInfoWindowClose])
+  }, [map, googleMaps, markers, onMarkerClick, selectedMarker])
 
   // Update marker appearance when selection changes (without recreating markers)
   useEffect(() => {
     if (!googleMaps || mapMarkers.length === 0) return
 
-    // Use uploaded PNG image for pin
-    const normalSize = 32
-    const largeSize = 40
+    // Use marker assets from src/assets/markers
+    const normalOfficeSize = 38
+    const largeOfficeSize = 46
+    const normalCheckpointSize = 28
+    const largeCheckpointSize = 34
 
     mapMarkers.forEach((marker) => {
       const markerData = marker.markerData
       if (!markerData) return
 
       const isSelected = getMarkerId(selectedMarker) === getMarkerId(markerData)
-      const iconSize = isSelected ? largeSize : normalSize
+      const markerType = getMarkerType(markerData)
+      const iconSize =
+        markerType === 'checkpoint'
+          ? (isSelected ? largeCheckpointSize : normalCheckpointSize)
+          : (isSelected ? largeOfficeSize : normalOfficeSize)
       
       // Anchor point at bottom center of the pin
       const anchorX = iconSize / 2
       const anchorY = iconSize
 
-      // Create new icon object with PNG image
-      const newIcon = {
-        url: '/police-pin.png', // Image from public folder
-        scaledSize: new googleMaps.Size(iconSize, iconSize), // Size of the icon
-        anchor: new googleMaps.Point(anchorX, anchorY), // Anchor at bottom center
-      }
+      const newIcon =
+        markerType === 'checkpoint'
+          ? {
+              url: policeCheckpointMarker,
+              scaledSize: new googleMaps.Size(iconSize, iconSize),
+              anchor: new googleMaps.Point(anchorX, anchorY),
+            }
+          : {
+              url: policeOfficeMarker,
+              scaledSize: new googleMaps.Size(iconSize, iconSize),
+              anchor: new googleMaps.Point(anchorX, anchorY),
+            }
 
       // Update icon
       marker.setIcon(newIcon)
@@ -409,54 +449,7 @@ export default function GoogleMap({
     })
   }, [selectedMarker, mapMarkers, googleMaps])
 
-  // Open info window for selected marker
-  useEffect(() => {
-    if (!selectedMarker || mapMarkers.length === 0 || !map) return
-
-    const selectedMapMarker = mapMarkers.find(
-      (m) => getMarkerId(m.markerData) === getMarkerId(selectedMarker)
-    )
-
-    if (selectedMapMarker?.infoWindow) {
-      // Close all other info windows first
-      mapMarkers.forEach((m) => {
-        if (m.infoWindow && m !== selectedMapMarker) {
-          m.infoWindow.close()
-        }
-      })
-      // Open the selected marker's info window
-      selectedMapMarker.infoWindow.open(map, selectedMapMarker)
-      // Center map on selected marker (this is intentional, so don't mark as user interaction)
-      if (selectedMapMarker.getPosition()) {
-        const currentCenter = map.getCenter()
-        const markerPos = selectedMapMarker.getPosition()
-        
-        // Only center if marker is not already in view or far away
-        // Use geometry library if available, otherwise just center if no current center
-        try {
-          if (!currentCenter) {
-            map.setCenter(markerPos)
-            map.setZoom(15)
-          } else if (googleMaps?.geometry?.spherical?.computeDistanceBetween) {
-            const distance = googleMaps.geometry.spherical.computeDistanceBetween(currentCenter, markerPos)
-            if (distance > 5000) {
-              map.setCenter(markerPos)
-              map.setZoom(15)
-            }
-          } else {
-            // Geometry library not available, just center if we don't have a center
-            map.setCenter(markerPos)
-            map.setZoom(15)
-          }
-        } catch (err) {
-          console.error('[GoogleMap] Error centering on selected marker:', err)
-          // Fallback: just center the map
-          map.setCenter(markerPos)
-          map.setZoom(15)
-        }
-      }
-    }
-  }, [selectedMarker, mapMarkers, map, googleMaps])
+  // NOTE: No Google InfoWindow. Dashboard shows details in a modal.
 
   // Always render the map container so ref is available
   // Show loading/error overlays on top if needed

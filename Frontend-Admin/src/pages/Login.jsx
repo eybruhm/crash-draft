@@ -3,8 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { LogIn, AlertCircle } from 'lucide-react'
 import { api } from '../services/api'
 import { ROUTES } from '../constants'
-import { storeToken, storeUser } from '../utils/auth'
+import { storeRefreshToken, storeToken, storeUser } from '../utils/auth'
 import { getErrorMessage } from '../utils/errors'
+import PasswordInput from '../components/PasswordInput'
+import logoV1 from '../assets/logo/logo-v1.png'
 
 /**
  * Login Page Component
@@ -36,6 +38,9 @@ export default function Login() {
       if (data?.access) {
         storeToken(data.access)
       }
+      if (data?.refresh) {
+        storeRefreshToken(data.refresh)
+      }
       storeUser({ ...(data?.user || {}), role: data?.role })
 
       const from = (location.state && location.state.from) || { pathname: ROUTES.DASHBOARD }
@@ -53,8 +58,9 @@ export default function Login() {
         {/* Header */}
         <div className="text-center">
           <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center border border-blue-500/40 shadow-xl shadow-blue-500/20">
-              <span className="text-white font-bold text-3xl">C</span>
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl border border-blue-500/40 shadow-xl shadow-blue-500/20 overflow-hidden">
+              {/* Logo: swap file here if you want a different version */}
+              <img src={logoV1} alt="CRASH" className="w-full h-full object-cover" />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Admin</h1>
@@ -82,14 +88,14 @@ export default function Login() {
             <label htmlFor="password" className="block text-sm font-semibold text-white mb-2.5">
               Password
             </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="glass-input w-full"
+              className="glass-input w-full pr-12"
               placeholder="••••••••"
+              autoComplete="current-password"
             />
           </div>
 

@@ -186,3 +186,114 @@ Summary
 Day 4 successfully integrated the real-time chat system and directions/navigation features with the backend API. The chat modal now polls for new messages every 5 seconds and properly identifies sender/receiver using the authenticated user's office ID and the report's reporter ID. The directions modal fetches route data and QR codes from the backend, with fallback calculations when the API is unavailable. A critical fix was made to include police office coordinates in the login response, enabling accurate route calculations from the officer's actual location.
 Key Achievement: Both communication (chat) and navigation (directions) features are now fully wired to real backend APIs, replacing all mock data dependencies.
 
+
+
+☑️ Written Day From The Roadmap
+DAY 4 (Admin): Manual Report Page (Admin “Create Report” / Data tools)
+Goal: Decide what Admin is allowed to do with reports, then implement safely.
+Step 1: Decide policy (important)
+Sub-steps (safe defaults we implemented now):
+1.	Admin1 can:
+•	create reports manually (YES)
+•	edit assigned office (NO)
+•	delete reports (NO)
+2.	Admin2 powers remain database-level (Supabase SQL), not via Admin web.
+Description: Keeps police workflow stable. Admin web does NOT touch police status updates.
+Step 2: Backend endpoints (Option B, safe subset)
+Sub-steps:
+1.	Add POST /api/v1/admin/reports/manual/
+2.	Secure it:
+•	JWT required
+•	role must be admin
+3.	Safety rules:
+•	assigned_office REQUIRED (911 dispatch chooses office)
+•	status allowed: Pending or Resolved (offline 911 cases can be inserted even if already resolved)
+•	if status=Resolved, backend bumps tbl_summary_analytics so it counts immediately
+•	location_city/location_barangay auto-filled via reverse geocode
+Step 3: Frontend Manual Report Page
+Sub-steps:
+1.	Enable Manual Report page UI in Admin web (3 tabs)
+2.	Tab 1: Manual Report Insert Form
+•	required: category, lat/lng, assigned police office UUID
+•	optional: reporter UUID, description, remarks, created_at/updated_at, status (Pending/Resolved)
+3.	Tab 2: User Search (find user UUID by email/name/phone, copy/select)
+4.	Tab 3: Police Search (find office UUID, copy/select)
+Description: Admin can insert offline 911 reports safely without breaking police flows.
+
+📋 Documentation: Day 4 (Admin) - Manual Report Tool
+What Was Done
+Step 1: Policy implemented (safe default)
+•	Admin web can create a report manually, but cannot delete/edit/status-change.
+•	Police web remains the only place for handling status workflow.
+Step 2: Backend manual report endpoint added
+•	Endpoint:
+o	POST /api/v1/admin/reports/manual/
+•	Behavior:
+o	Requires JWT admin role
+o	Auto reverse-geocodes city/barangay
+o	assigned_office is REQUIRED (from 911 dispatch)
+o	status can be Pending or Resolved
+o	If status is Resolved, we update analytics cache immediately
+o	Returns ReportListSerializer payload for immediate UI display
+Step 3: Frontend Manual Report page enabled (3 tabs)
+•	Tab 1: Manual Report Insert Form (fills real DB report row)
+•	Tab 2: User Search (helps admin find reporter UUID)
+•	Tab 3: Police Search (helps admin find office UUID)
+________________________________________
+Files Created and Modified
+Modified (Backend):
+•	Backend/core/serializers.py
+o	Added: AdminManualReportCreateSerializer
+•	Backend/core/views/__init__.py
+o	Added: AdminManualReportCreateAPIView
+•	Backend/core/urls.py
+o	Added route: /admin/reports/manual/
+o	Added route: /admin/users/search/
+Modified (Admin Frontend):
+•	Frontend-Admin/src/services/api.js
+o	Added: createManualReport()
+o	Added: searchUsers()
+•	Frontend-Admin/src/pages/ManualReport.jsx
+o	Replaced “Not Available Yet” with 3-tab Manual Report tool (Manual/User/Police)
+________________________________________
+How to Test
+Test 1: Manual report creation
+1.	Start backend: python manage.py runserver
+2.	Start admin web: npm run dev
+3.	Login as admin
+4.	Go to Manual Report page
+5.	Fill:
+o	category
+o	latitude/longitude
+o	(optional) select assigned office
+6.	Click “Create Report”
+Expected:
+•	Success message shows new report_id
+•	DB row inserted in tbl_reports
+•	location_city/location_barangay should be filled (if geocoding works)
+•	If status=Resolved, tbl_summary_analytics count should increase for that location/category
+Test 2: User Search tab
+1. Go to User Search tab
+2. Search by email/phone/name
+Expected:
+• Results show user UUID
+• Copy UUID works
+• “Use as Reporter” fills the form and returns to Manual Report tab
+Test 3: Police Search tab
+1. Go to Police Search tab
+2. Search by office name/city/barangay
+Expected:
+• Results show office UUID
+• Copy UUID works
+• “Use as Assigned Office” fills the form and returns to Manual Report tab
+________________________________________
+Current State
+•	Admin Manual Report tool: ✅ Ready (create-only)
+•	Policy: ✅ Safe default (no delete/edit/status from Admin)
+Important Notes
+1.	This endpoint is separate from /reports/ to avoid impacting Police flow.
+2.	If Google API key/quota fails, geocoding may return null fields.
+Next Steps / Day Preview
+•	If you decide Admin1 should also “reassign office”, add a separate admin endpoint (PATCH /api/v1/admin/reports/{id}/assign-office/) with strict rules.
+Summary
+Day 4 added an admin-only “Manual Report” tool that can create reports safely without affecting police workflows. It uses dedicated endpoints, forces status to Pending, and uses the existing barangay geocoding logic for location fields.

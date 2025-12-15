@@ -95,6 +95,11 @@ class PoliceOffice(models.Model):
     # Used to calculate which office is closest to an incident
     latitude = models.DecimalField(max_digits=10, decimal_places=7)
     longitude = models.DecimalField(max_digits=10, decimal_places=7)
+
+    # Cached geocoded location (same pattern as Report.location_city/location_barangay)
+    # Filled automatically from latitude/longitude for easier UI display/filtering.
+    location_city = models.CharField(max_length=50, blank=True, null=True)
+    location_barangay = models.CharField(max_length=50, blank=True, null=True)
     
     # ForeignKey = "link" to the Admin table
     # on_delete=SET_NULL = if the admin is deleted, set this to NULL (don't delete the office)

@@ -13,6 +13,7 @@ import { AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import logoV1 from '../assets/logo/logo-v1.png'
 
 const Login = () => {
   const navigate = useNavigate()
@@ -86,7 +87,8 @@ const Login = () => {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="mx-auto h-16 w-16 bg-white/95 backdrop-blur-xl rounded-full flex items-center justify-center shadow-2xl ring-2 ring-white/60 hover:scale-105 transition-transform">
-            <span className="text-primary-600 text-2xl font-bold">C</span>
+              {/* Logo: swap this import if you want a different version */}
+              <img src={logoV1} alt="CRASH" className="h-full w-full object-cover rounded-full" />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-white drop-shadow-lg">CRASH Dashboard</h2>
           <p className="mt-2 text-sm text-white/90 font-medium drop-shadow">Police Authority Login</p>
