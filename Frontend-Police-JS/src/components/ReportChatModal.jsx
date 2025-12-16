@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { AlertTriangle, MessageSquare, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { getMessages, sendMessage, mapMessageToFrontend } from '../services/messagesService'
+import { POLLING_INTERVALS } from '../constants'
 
 /**
  * ReportChatModal - Chat interface between police and reporter
@@ -56,8 +57,8 @@ const ReportChatModal = ({ report, onClose }) => {
   useEffect(() => {
     fetchMessages()
     
-    // Poll for new messages every 5 seconds
-    const pollInterval = setInterval(fetchMessages, 5000)
+    // Poll for new messages every report_chat seconds
+    const pollInterval = setInterval(fetchMessages, POLLING_INTERVALS.REPORT_CHAT)
     
     return () => clearInterval(pollInterval)
   }, [fetchMessages])

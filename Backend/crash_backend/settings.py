@@ -111,6 +111,7 @@ WSGI_APPLICATION = 'crash_backend.wsgi.application'
 #     }
 # }
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -137,9 +138,10 @@ REST_FRAMEWORK = {
     # This prevents the auto-lookup of Django User model which conflicts with our
     # PoliceOffice model (UUID vs integer primary key mismatch)
     
-    # Datetime format: Return times in Manila timezone as ISO strings
-    # This allows frontend to display times directly without conversion
-    'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S%z',  # ISO format with timezone
+    # Datetime format:
+    # Use DRF's ISO-8601 output (includes timezone info like 'Z' or '+08:00').
+    # This prevents JS from misreading naive timestamps as local time.
+    'DATETIME_FORMAT': 'iso-8601',
     'DEFAULT_AUTHENTICATION_CLASSES': [],
     # Most endpoints don't require auth by default (public access for citizens)
     # Individual views/viewsets can override with permission_classes

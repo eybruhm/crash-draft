@@ -215,9 +215,6 @@ const ResolvedCaseDetailsModal = ({ case_, onClose }) => {
                     <MapPin className="h-3 w-3 text-gray-500 mr-1 mt-1" />
                     <div>
                       <p className="text-sm font-medium text-gray-900">{incidentAddress}</p>
-                      <p className="text-xs text-gray-600 mt-0.5">
-                        {case_.city}, {case_.barangay}
-                      </p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         Coordinates: {lat != null ? lat.toFixed(6) : 'N/A'}, {lng != null ? lng.toFixed(6) : 'N/A'}
                       </p>
@@ -231,6 +228,15 @@ const ResolvedCaseDetailsModal = ({ case_, onClose }) => {
                     {case_.description}
                   </p>
                 </div>
+
+                {(fullReport?.remarks || case_?.remarks) && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Remarks</label>
+                    <p className="text-sm text-gray-900 bg-white/70 backdrop-blur-sm p-4 rounded-lg border border-white/40 shadow-sm leading-relaxed">
+                      {fullReport?.remarks || case_?.remarks}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -28,6 +28,7 @@ const STATUS_OPTIONS = [
 
 const ReportDetailsModal = ({ report, onClose, onStatusChange, onOpenChat, onDistanceEtaUpdate }) => {
   const [selectedStatus, setSelectedStatus] = useState(report.status || 'Pending')
+  const [remarks, setRemarks] = useState(report.remarks || '')
   const [showAttachments, setShowAttachments] = useState(false)
   const [attachments, setAttachments] = useState([])
   const [attachmentsLoading, setAttachmentsLoading] = useState(false)
@@ -38,7 +39,8 @@ const ReportDetailsModal = ({ report, onClose, onStatusChange, onOpenChat, onDis
 
   useEffect(() => {
     setSelectedStatus(report.status || 'Pending')
-  }, [report.status])
+    setRemarks(report.remarks || '')
+  }, [report.status, report.remarks])
 
   // If distance/eta are missing, compute a simple fallback using haversine + assumed speed.
   useEffect(() => {
@@ -91,7 +93,10 @@ const ReportDetailsModal = ({ report, onClose, onStatusChange, onOpenChat, onDis
 
   const handleStatusChange = () => {
     if (selectedStatus !== report.status && onStatusChange) {
-      onStatusChange(report.id, selectedStatus)
+      onStatusChange(report.id, selectedStatus, remarks)
+    } else if (onStatusChange && remarks !== (report.remarks || '')) {
+      // If only remarks changed, still update
+      onStatusChange(report.id, selectedStatus, remarks)
     }
     onClose()
   }
@@ -268,6 +273,15 @@ const ReportDetailsModal = ({ report, onClose, onStatusChange, onOpenChat, onDis
                   <p className="text-sm font-medium text-gray-900">{formatTimestamp(report.timestamp)}</p>
                 </div>
               </div>
+
+              {report.remarks && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Remarks</label>
+                  <p className="text-sm text-gray-900 bg-white/70 backdrop-blur-sm p-4 rounded-lg border border-white/40 shadow-sm leading-relaxed">
+                    {report.remarks}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -368,24 +382,36 @@ const ReportDetailsModal = ({ report, onClose, onStatusChange, onOpenChat, onDis
           )}
         </div>
 
-        <div className="flex justify-end space-x-3 p-6 border-t border-gray-200/50 bg-white/50 backdrop-blur-sm">
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="input-field max-w-[200px]"
-          >
-            {getStatusOptions().map((status) => (
-              <option key={status.value} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </select>
-          <button onClick={onClose} className="btn-secondary">
-            Cancel
-          </button>
-          <button onClick={handleStatusChange} className="btn-primary">
-            Update Status
-          </button>
+        <div className="p-6 border-t border-gray-200/50 bg-white/50 backdrop-blur-sm space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Remarks (optional)</label>
+            <textarea
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder="Add notes about this report (e.g., actions taken, observations)..."
+              rows={3}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none resize-none"
+            />
+          </div>
+          <div className="flex justify-end space-x-3">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="input-field max-w-[200px]"
+            >
+              {getStatusOptions().map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+            <button onClick={onClose} className="btn-secondary">
+              Cancel
+            </button>
+            <button onClick={handleStatusChange} className="btn-primary">
+              Update Status
+            </button>
+          </div>
         </div>
       </div>
     </div>

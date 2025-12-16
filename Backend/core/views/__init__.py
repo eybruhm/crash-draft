@@ -862,28 +862,19 @@ class AdminManualReportCreateAPIView(APIView):
             updated_at_value = timezone.now()
 
         # Allow overriding timestamps for offline 911 reports (post-save update)
-        # CRITICAL: Ensure all timestamps are timezone-aware (UTC) before saving
-        # The serializer should have already handled timezone conversion, but double-check here
+        # CRITICAL: Ensure all timestamps are timezone-aware and stored in UTC.
+        # Serializer handles this, but double-check here so DB stays consistent.
         from datetime import timezone as dt_timezone
+        manila_tz = timezone.get_current_timezone()
         update_fields = {}
         if created_at_value:
-            # Ensure timezone-aware (should already be UTC from serializer)
             if timezone.is_naive(created_at_value):
-                # If somehow still naive, assume UTC (from ISO string)
-                created_at_value = timezone.make_aware(created_at_value, dt_timezone.utc)
-            elif created_at_value.tzinfo != dt_timezone.utc:
-                # Convert to UTC if in different timezone
-                created_at_value = created_at_value.astimezone(dt_timezone.utc)
-            update_fields['created_at'] = created_at_value
+                created_at_value = timezone.make_aware(created_at_value, manila_tz)
+            update_fields['created_at'] = created_at_value.astimezone(dt_timezone.utc)
         if updated_at_value:
-            # Ensure timezone-aware (should already be UTC from serializer)
             if timezone.is_naive(updated_at_value):
-                # If somehow still naive, assume UTC (from ISO string)
-                updated_at_value = timezone.make_aware(updated_at_value, dt_timezone.utc)
-            elif updated_at_value.tzinfo != dt_timezone.utc:
-                # Convert to UTC if in different timezone
-                updated_at_value = updated_at_value.astimezone(dt_timezone.utc)
-            update_fields['updated_at'] = updated_at_value
+                updated_at_value = timezone.make_aware(updated_at_value, manila_tz)
+            update_fields['updated_at'] = updated_at_value.astimezone(dt_timezone.utc)
         if update_fields:
             Report.objects.filter(report_id=report.report_id).update(**update_fields)
             report = Report.objects.select_related('reporter', 'assigned_office').get(report_id=report.report_id)

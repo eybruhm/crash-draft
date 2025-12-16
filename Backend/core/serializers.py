@@ -287,38 +287,34 @@ class AdminManualReportCreateSerializer(serializers.ModelSerializer):
     remarks = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     
     def to_internal_value(self, data):
+        """Ensure datetime fields are timezone-aware and stored consistently.
+
+        Policy:
+        - If the incoming datetime is naive (no tzinfo), treat it as Asia/Manila local time.
+          (This matches admin datetime-local inputs.)
+        - If the incoming datetime is aware (has tzinfo, e.g. +08:00 or Z), convert it to UTC.
         """
-        Override to ensure datetime fields are properly parsed as timezone-aware.
-        Frontend sends ISO strings (UTC), but we need to ensure they're parsed correctly.
-        Django's DateTimeField should handle ISO strings automatically, but we ensure UTC.
-        """
-        # Get the base parsed data
+
         validated_data = super().to_internal_value(data)
-        
-        # Import timezone utilities
+
         from django.utils import timezone
         from datetime import timezone as dt_timezone
-        
-        # Handle created_at: ensure it's timezone-aware (UTC)
-        if 'created_at' in validated_data and validated_data['created_at']:
-            dt = validated_data['created_at']
+
+        manila_tz = timezone.get_current_timezone()
+
+        def _normalize_to_utc(dt):
+            if not dt:
+                return dt
             if timezone.is_naive(dt):
-                # If naive, assume it's UTC (from ISO string) and make it aware
-                validated_data['created_at'] = timezone.make_aware(dt, dt_timezone.utc)
-            # If already aware, ensure it's in UTC
-            elif dt.tzinfo != dt_timezone.utc:
-                validated_data['created_at'] = dt.astimezone(dt_timezone.utc)
-        
-        # Handle updated_at: ensure it's timezone-aware (UTC)
-        if 'updated_at' in validated_data and validated_data['updated_at']:
-            dt = validated_data['updated_at']
-            if timezone.is_naive(dt):
-                # If naive, assume it's UTC (from ISO string) and make it aware
-                validated_data['updated_at'] = timezone.make_aware(dt, dt_timezone.utc)
-            # If already aware, ensure it's in UTC
-            elif dt.tzinfo != dt_timezone.utc:
-                validated_data['updated_at'] = dt.astimezone(dt_timezone.utc)
-        
+                dt = timezone.make_aware(dt, manila_tz)
+            return dt.astimezone(dt_timezone.utc)
+
+        if validated_data.get('created_at'):
+            validated_data['created_at'] = _normalize_to_utc(validated_data['created_at'])
+
+        if validated_data.get('updated_at'):
+            validated_data['updated_at'] = _normalize_to_utc(validated_data['updated_at'])
+
         return validated_data
 
     class Meta:

@@ -72,9 +72,15 @@ export default function ManualReport() {
 
   function toIsoOrNull(datetimeLocal) {
     if (!datetimeLocal) return null
-    const d = new Date(datetimeLocal)
-    if (Number.isNaN(d.getTime())) return null
-    return d.toISOString()
+
+    // datetime-local inputs have NO timezone.
+    // Converting via `new Date(...).toISOString()` depends on the browser/device timezone
+    // and can shift timestamps unexpectedly. CRASH is Manila-based, so we encode the
+    // timestamp explicitly as Asia/Manila (+08:00).
+    // Expected input: "YYYY-MM-DDTHH:mm" or "YYYY-MM-DDTHH:mm:ss"
+    const hasSeconds = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(datetimeLocal)
+    const base = hasSeconds ? datetimeLocal : `${datetimeLocal}:00`
+    return `${base}+08:00`
   }
 
   async function copy(text) {
