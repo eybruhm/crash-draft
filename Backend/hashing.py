@@ -40,6 +40,7 @@ def main():
     print()
     print("This script converts a plain text password to Django hashed password.")
     print("The hashed password can be inserted directly into Supabase.")
+    print("Typing the password will be hidden for security.")
     print()
     
     # Prompt for password (hidden input for security)
