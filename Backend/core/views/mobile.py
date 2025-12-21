@@ -18,7 +18,7 @@ from rest_framework.exceptions import ValidationError
 
 from ..models import Report, Media, PoliceOffice, User
 from ..services import reverse_geocode, find_nearest_office, get_media_limits
-from ..serializers import _supabase
+from ..serializers import get_supabase_client
 
 
 class MobileCreateReportWithMediaAPIView(APIView):
@@ -144,7 +144,8 @@ class MobileCreateReportWithMediaAPIView(APIView):
 
             # Upload bytes
             try:
-                res = _supabase.storage.from_(bucket).upload(
+                supabase = get_supabase_client()
+                res = supabase.storage.from_(bucket).upload(
                     storage_path,
                     f.read(),
                     file_options={
@@ -164,7 +165,8 @@ class MobileCreateReportWithMediaAPIView(APIView):
                 raise ValidationError({"uploaded_file": f"Upload failed: {e}"})
 
             # URL
-            public_url = _supabase.storage.from_(bucket).get_public_url(storage_path)
+            supabase = get_supabase_client()
+            public_url = supabase.storage.from_(bucket).get_public_url(storage_path)
             if isinstance(public_url, dict):
                 public_url = public_url.get('publicUrl') or public_url.get('public_url')
 

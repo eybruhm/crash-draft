@@ -11,12 +11,26 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
-from dotenv import load_dotenv
-load_dotenv()  
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from Backend/.env (works even if the process is
+# started from a different working directory).
+load_dotenv(dotenv_path=BASE_DIR / '.env')
+
+
+def _env_str(name: str, default: str | None = None) -> str | None:
+    value = os.getenv(name, default)
+    if not isinstance(value, str):
+        return value
+    value = value.strip()
+    if (len(value) >= 2) and ((value[0] == value[-1]) and value[0] in ("'", '"')):
+        value = value[1:-1]
+    return value
 
 
 # Quick-start development settings - unsuitable for production
@@ -100,37 +114,26 @@ WSGI_APPLICATION = 'crash_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'postgres',
-#         'USER': 'postgres.uhutjmujczeuqeoqosuw',
-#         'PASSWORD': 'softwareengineering101',
-#         'HOST': 'aws-1-ap-northeast-2.pooler.supabase.com',
-#         'PORT': '5432',
-#     }
-# }
-
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',
-        'USER': 'postgres.hlkjnvovfhxwhjseeokx',
-        'PASSWORD': 'Emanvelasco123',
-        'HOST': 'aws-1-ap-southeast-1.pooler.supabase.com',
-        'PORT': '5432',
+        'NAME': os.getenv('DB_NAME', 'postgres'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
 
 # Under DATABASES, ensure the password is still hardcoded for now, but use this for the API Key:
-GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY') 
-SECRET_KEY = os.getenv('SECRET_KEY')
+GOOGLE_MAPS_API_KEY = _env_str('GOOGLE_MAPS_API_KEY')
+SECRET_KEY = _env_str('SECRET_KEY')
 
 # Supabase SDK Settings
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_SERVICE_ROLE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+SUPABASE_URL = _env_str('SUPABASE_URL')
+SUPABASE_SERVICE_ROLE_KEY = _env_str('SUPABASE_SERVICE_ROLE_KEY')
 
 # REST Framework Configuration
 REST_FRAMEWORK = {

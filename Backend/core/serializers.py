@@ -12,6 +12,7 @@ from django.core.files.storage import default_storage
 from django.conf import settings
 from rest_framework.exceptions import ValidationError
 from supabase import create_client
+import logging
 import os, uuid
 from .models import (
     Admin, 
@@ -24,6 +25,8 @@ from .models import (
     SummaryAnalytics
 )
 from .services import get_media_limits
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -49,13 +52,34 @@ class ReporterSerializer(serializers.ModelSerializer):
 # SUPABASE CLIENT SETUP
 # ============================================================================
 # Supabase = cloud database and file storage service
-# This client connects our Django app to Supabase (initialized once at startup)
-try:
-    _supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
-except Exception as e:
-    # Fail immediately if credentials are missing or invalid
-    # Better to crash now than discover the problem in production
-    raise EnvironmentError(f"Supabase client failed to initialize: {e}")
+# This client connects our Django app to Supabase.
+# IMPORTANT (Windows/dev): do NOT crash Django on import if Supabase is misconfigured.
+# We initialize lazily and raise a clear error only when an endpoint actually needs it.
+_supabase = None
+
+
+def get_supabase_client():
+    global _supabase
+    if _supabase is not None:
+        return _supabase
+
+    supabase_url = (getattr(settings, 'SUPABASE_URL', None) or '').strip()
+    supabase_key = getattr(settings, 'SUPABASE_SERVICE_ROLE_KEY', None)
+
+    try:
+        _supabase = create_client(supabase_url, supabase_key)
+        return _supabase
+    except Exception as e:
+        # Do not log the service-role key.
+        logger.error("Supabase client init failed: %s", e)
+        raise EnvironmentError(
+            "Supabase is not configured correctly. "
+            "Fix your environment variables in Backend/.env (or OS env vars) and restart the server.\n"
+            "- SUPABASE_URL must start with 'https://' (example: https://<project-ref>.supabase.co)\n"
+            "- SUPABASE_SERVICE_ROLE_KEY must be set (do not wrap it in extra quotes)\n"
+            f"Current SUPABASE_URL value: {supabase_url!r}\n"
+            f"Original error: {e}"
+        )
 
 # ============================================================================
 # ADMIN SERIALIZERS
@@ -559,7 +583,8 @@ class MediaSerializer(serializers.ModelSerializer):
         # Upload to Supabase Storage
         try:
             file_bytes = uploaded_file.read()
-            res = _supabase.storage.from_(bucket).upload(
+            supabase = get_supabase_client()
+            res = supabase.storage.from_(bucket).upload(
                 storage_path,
                 file_bytes,
                 file_options={
@@ -580,7 +605,8 @@ class MediaSerializer(serializers.ModelSerializer):
 
         # Get URL (public if bucket is public). If bucket is private, you can switch to signed URLs later.
         try:
-            public_url = _supabase.storage.from_(bucket).get_public_url(storage_path)
+            supabase = get_supabase_client()
+            public_url = supabase.storage.from_(bucket).get_public_url(storage_path)
             if isinstance(public_url, dict):
                 public_url = public_url.get('publicUrl') or public_url.get('public_url')
             if not public_url:
