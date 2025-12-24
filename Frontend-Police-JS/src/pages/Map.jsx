@@ -36,7 +36,7 @@ const markerIcons = {
 }
 
 const markerSize = (size = 36) => (window.google ? new window.google.maps.Size(size, size) : undefined)
-const defaultCenter = { lat: 14.5995, lng: 120.9842 }
+const defaultCenter = { lat: 14.667816, lng: 121.057198 }
 const defaultZoom = 12
 
 const checkpointStatusClass = (isActive) => (isActive ? 'text-lime-500' : 'text-gray-500')

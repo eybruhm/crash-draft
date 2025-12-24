@@ -240,9 +240,10 @@ export default function Dashboard() {
               onMarkerClick={setSelectedPin}
               selectedMarker={selectedPin}
               onMapRightClick={handleMapRightClick}
-              defaultCenter={{ lat: 14.5995, lng: 120.9842 }} // Manila, Philippines
-              defaultZoom={10}
+              defaultCenter={{ lat: 14.667816, lng: 121.057198 }} 
+              defaultZoom={20}
             />
+             
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                 <div className="text-center glass-elevated p-8 max-w-md">

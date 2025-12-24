@@ -267,11 +267,11 @@ export default function ManualReport() {
                   className="w-full px-4 py-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-400/60 focus:bg-white/20 text-white outline-none transition-all"
                   >
                     <option value="" className="bg-slate-900">Select</option>
+                    <option value="Violence" className="bg-slate-900">Violence</option>
                     <option value="Emergency" className="bg-slate-900">Emergency</option>
-                    <option value="Accident" className="bg-slate-900">Accident</option>
                     <option value="Theft" className="bg-slate-900">Theft</option>
-                    <option value="Assault" className="bg-slate-900">Assault</option>
-                    <option value="Traffic Violation" className="bg-slate-900">Traffic Violation</option>
+                    <option value="Threat" className="bg-slate-900">Threat</option>
+                    <option value="Suspicious" className="bg-slate-900">Suspicious</option>
                     <option value="Vandalism" className="bg-slate-900">Vandalism</option>
                     <option value="Other" className="bg-slate-900">Other</option>
                   </select>

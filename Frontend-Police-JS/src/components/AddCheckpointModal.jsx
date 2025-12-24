@@ -80,7 +80,7 @@ const AddCheckpointModal = ({ onClose, onAdd }) => {
                 type="tel"
                 value={formData.contactNumber}
                 onChange={(e) => handleInputChange('contactNumber', e.target.value)}
-                placeholder="e.g., +63 912 345 6789"
+                placeholder="e.g. 09123456789"
                 className="input-field pl-10"
                 required
               />
